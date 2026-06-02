@@ -1,0 +1,9 @@
+.DS_Store
+dist/
+download-check/
+node_modules/
+screenshots/
+test-results/
+.edge-headless-profile/
+.edge-profile/
+*.log

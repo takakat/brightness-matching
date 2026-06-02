@@ -1,0 +1,19 @@
+{
+  "name": "brightness-online-experiment",
+  "private": true,
+  "description": "Standalone jsPsych-based online experiment for brightness evaluation and matching.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/prepare-pages.mjs",
+    "build:pages": "node scripts/prepare-pages.mjs",
+    "export:standalone": "node scripts/export-standalone.mjs",
+    "start": "node server.js",
+    "test:smoke": "node tests/condition-assignment-smoke.mjs && node tests/selection-smoke.mjs && node tests/matching-trials-smoke.mjs && node tests/writing-stimulus-smoke.mjs && node tests/data-validation-smoke.mjs && node tests/data-summary-smoke.mjs && node tests/analysis-export-smoke.mjs",
+    "test:e2e": "node test-production.js",
+    "test": "start-server-and-test start http://localhost:8080 test:e2e"
+  },
+  "devDependencies": {
+    "puppeteer": "^25.1.0",
+    "start-server-and-test": "^3.0.5"
+  }
+}
