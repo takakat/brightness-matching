@@ -28,9 +28,9 @@ function renderAssignmentError(message) {
   document.body.innerHTML = `
     <div class="jspsych-display-element">
       <div class="instruction-card">
-        <h1>譚｡莉ｶ蜑ｲ繧雁ｽ薙※繧帝幕蟋九〒縺阪∪縺帙ｓ縺ｧ縺励◆</h1>
+        <h1>隴夲ｽ｡闔会ｽｶ陷托ｽｲ郢ｧ髮・ｽｽ阮吮ｻ郢ｧ蟶晏ｹ戊沂荵昴堤ｸｺ髦ｪ竏ｪ邵ｺ蟶呻ｽ鍋ｸｺ・ｧ邵ｺ蜉ｱ笳・/h1>
         <p class="lead">${message}</p>
-        <p>DataPipe 縺ｮ險ｭ螳壹√ロ繝・ヨ繝ｯ繝ｼ繧ｯ謗･邯壹‘xperiment ID 繧堤｢ｺ隱阪＠縺ｦ縺上□縺輔＞縲・/p>
+        <p>DataPipe 邵ｺ・ｮ髫ｪ・ｭ陞ｳ螢ｹﾂ竏壹Ο郢昴・繝ｨ郢晢ｽｯ郢晢ｽｼ郢ｧ・ｯ隰暦ｽ･驍ｯ螢ｹﾂ窶・periment ID 郢ｧ蝣､・｢・ｺ髫ｱ髦ｪ・邵ｺ・ｦ邵ｺ荳岩味邵ｺ霈費ｼ樒ｸｲ繝ｻ/p>
       </div>
     </div>
   `;
@@ -425,7 +425,7 @@ function createNormalTimeline() {
     {
       type: jsPsychPreload,
       images: preloadImages,
-      message: "蛻ｺ豼逕ｻ蜒上ｒ隱ｭ縺ｿ霎ｼ縺ｿ荳ｭ縺ｧ縺・..",
+      message: "使用する画像を読み込んでいます...",
     },
     createIntroTrial(),
     createConsentTrial(),
@@ -502,7 +502,7 @@ function createPreviewTimeline(mode) {
   const commonPreload = {
     type: jsPsychPreload,
     images: preloadImages,
-    message: "繝励Ξ繝薙Η繝ｼ逕ｨ逕ｻ蜒上ｒ隱ｭ縺ｿ霎ｼ縺ｿ荳ｭ縺ｧ縺・..",
+    message: "プレビュー用の画像を読み込んでいます...",
   };
 
   if (mode === "intro") {

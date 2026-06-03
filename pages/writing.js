@@ -96,7 +96,7 @@ export function createWritingTrial({ state }) {
         value: defaultText,
       },
     ],
-    button_label: "谺｡縺ｸ",
+    button_label: "次へ",
     on_load: () => {
       const form = document.getElementById("jspsych-survey-text-form");
       const textarea = document.querySelector("textarea");
@@ -111,7 +111,7 @@ export function createWritingTrial({ state }) {
 
       const counter = document.createElement("p");
       counter.className = "writing-counter";
-      counter.innerHTML = `迴ｾ蝨ｨ縺ｮ譁・ｭ玲焚: <strong id="writing-count">0</strong> / ${EXPERIMENT_CONFIG.writingMinCharacters}`;
+      counter.innerHTML = `現在の文字数: <strong id="writing-count">0</strong> / ${EXPERIMENT_CONFIG.writingMinCharacters}`;
       textarea.parentElement.appendChild(counter);
 
       function updateCount() {

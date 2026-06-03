@@ -38,7 +38,12 @@ function applyTestResponseToVisibleRadios(questions, response) {
   });
 }
 
-export function createPreSdTimeline({ stimuli, questions, evaluationKeys, phaseLabel = "莠句燕隧穂ｾ｡" }) {
+export function createPreSdTimeline({
+  stimuli,
+  questions,
+  evaluationKeys,
+  phaseLabel = "事前SD評定",
+}) {
   const { jsPsychSurveyLikert } = window;
   const searchParams = new URLSearchParams(window.location.search);
   const testMode = isTestMode(searchParams);
@@ -50,7 +55,7 @@ export function createPreSdTimeline({ stimuli, questions, evaluationKeys, phaseL
     preamble: renderSdPreamble(phaseLabel, stimulus, zeroBasedIndex + 1, stimuli.length),
     questions,
     scale_width: 880,
-    button_label: "谺｡縺ｸ",
+    button_label: "次へ",
     data: testMode ? { test_scenario: testScenarioId } : {},
     on_load: testMode
       ? function () {
@@ -77,7 +82,12 @@ export function createPreSdTimeline({ stimuli, questions, evaluationKeys, phaseL
   }));
 }
 
-export function createPostSdLoop({ state, questions, evaluationKeys, phaseLabel = "蜀崎ｩ穂ｾ｡" }) {
+export function createPostSdLoop({
+  state,
+  questions,
+  evaluationKeys,
+  phaseLabel = "事後SD評定",
+}) {
   const { jsPsychSurveyLikert } = window;
   const searchParams = new URLSearchParams(window.location.search);
   const testMode = isTestMode(searchParams);
@@ -94,7 +104,7 @@ export function createPostSdLoop({ state, questions, evaluationKeys, phaseLabel 
       return questions;
     },
     scale_width: 880,
-    button_label: "谺｡縺ｸ",
+    button_label: "次へ",
     on_load: testMode
       ? function () {
           setTimeout(() => {
