@@ -270,6 +270,8 @@ const state = {
   testScenarioId,
 };
 
+window.experimentState = state;
+
 const jsPsych = initJsPsych({
   on_finish: () => {
     window.experimentState = state;
@@ -359,6 +361,7 @@ function assignSelectionState(experimentState, selection) {
   experimentState.matchingPlan.post_matching = buildMatchingPlan({
     state: experimentState,
   });
+  window.experimentState = experimentState;
 }
 
 function setPreviewMatchingPlan(experimentState, phase) {
@@ -402,6 +405,7 @@ function createDataSaveTrial() {
             ...result,
           };
           window.dataPipeSaveResult = state.dataPipeSave;
+          window.experimentState = state;
           console.log("dataPipeSaveResult", state.dataPipeSave);
         })
         .catch((error) => {
@@ -410,6 +414,7 @@ function createDataSaveTrial() {
             message: error instanceof Error ? error.message : String(error),
           };
           window.dataPipeSaveResult = state.dataPipeSave;
+          window.experimentState = state;
           console.error("dataPipeSaveError", error);
         })
         .finally(done);
