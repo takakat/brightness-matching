@@ -85,6 +85,8 @@ export const ANALYSIS_CSV_COLUMNS = [
   "char_count",
   "essay",
   "consent_date",
+  "consent_gender",
+  "consent_age",
   "consent_signature",
   "consent_agreed_count",
   "consent_complete",
@@ -384,6 +386,8 @@ function buildConsentRecord(baseRecord, row) {
   return {
     ...baseRecord,
     consent_date: row.consent_date ?? null,
+    consent_gender: row.consent_gender ?? null,
+    consent_age: normalizeNumber(row.consent_age),
     consent_signature: row.consent_signature ?? null,
     consent_agreed_count: normalizeNumber(row.consent_agreed_count),
     consent_complete: normalizeBoolean(row.consent_complete),

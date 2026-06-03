@@ -11,7 +11,7 @@ import { buildAnalysisCsv } from "./logic/analysisExport.js?v=20260528-analysis-
 import { summarizeExperimentRows } from "./logic/dataSummary.js?v=20260528-flow-validation";
 import { selectStimuli } from "./logic/selection.js";
 import { getTestScenarioId, isTestMode } from "./logic/testScenario.js";
-import { createConsentTrial } from "./pages/consent.js?v=20260528-production-mode";
+import { createConsentTrial } from "./pages/consent.js?v=20260604-consent-demographics";
 import { createFinishTrial } from "./pages/finish.js?v=20260528-flow-validation";
 import { createIntroTrial } from "./pages/intro.js?v=20260528-production-mode";
 import { buildMatchingPlan, createMatchingLoop } from "./pages/matching.js?v=20260528-flow-validation";
@@ -432,7 +432,6 @@ function createNormalTimeline() {
       images: preloadImages,
       message: "使用する画像を読み込んでいます...",
     },
-    createIntroTrial(),
     createConsentTrial(),
     ...createPreSdTimeline({
       stimuli: activeStimuli,
