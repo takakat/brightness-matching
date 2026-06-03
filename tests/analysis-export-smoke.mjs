@@ -204,12 +204,15 @@ assert.equal(analysisRows[5].stimulus_analysis_role, "control");
 assert.equal(analysisRows[5].matching_delta_from_initial, -65);
 assert.equal(analysisRows[6].is_post_sd_stimulus, true);
 assert.equal(analysisRows[0].prototype_stimulus_count, 20);
+assert.equal(analysisRows[0].trial_type, "html-button-response");
 
 const csv = buildAnalysisCsv(rows, state);
 const [header, firstDataRow] = csv.split("\n");
 
 assert.equal(header, ANALYSIS_CSV_COLUMNS.join(","));
+assert.ok(header.includes("trial_type"));
 assert.ok(firstDataRow.includes("consent"));
+assert.ok(firstDataRow.includes("html-button-response"));
 assert.ok(csv.includes("stimulus_020"));
 
 console.log(csv);
