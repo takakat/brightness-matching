@@ -23,16 +23,17 @@ const missingMatchingSummary = summarizeExperimentRows(
       { id: "stimulus_019" },
       { id: "stimulus_018" },
       { id: "stimulus_017" },
+      { id: "stimulus_016" },
     ],
     postSdStimuli: [{ id: "stimulus_020" }],
   }
 );
 
 assert.ok(
-  missingMatchingSummary.validationErrors.includes("Expected 16 pre-matching trials but found 0.")
+  missingMatchingSummary.validationErrors.includes("Expected 20 pre-matching trials but found 0.")
 );
 assert.ok(
-  missingMatchingSummary.validationErrors.includes("Expected 16 post-matching trials but found 0.")
+  missingMatchingSummary.validationErrors.includes("Expected 20 post-matching trials but found 0.")
 );
 
 const missingWritingSummary = summarizeExperimentRows(
@@ -45,6 +46,7 @@ const missingWritingSummary = summarizeExperimentRows(
       { id: "stimulus_019" },
       { id: "stimulus_018" },
       { id: "stimulus_017" },
+      { id: "stimulus_016" },
     ],
     postSdStimuli: [],
   }

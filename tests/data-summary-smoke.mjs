@@ -29,6 +29,7 @@ const rows = [
   ...createMatchingRows({ phase: "pre_matching", stimulusId: "stimulus_019", values: [125, 129, 127, 131] }),
   ...createMatchingRows({ phase: "pre_matching", stimulusId: "stimulus_018", values: [121, 123, 125, 127] }),
   ...createMatchingRows({ phase: "pre_matching", stimulusId: "stimulus_017", values: [119, 121, 123, 125] }),
+  ...createMatchingRows({ phase: "pre_matching", stimulusId: "stimulus_016", values: [117, 119, 121, 123] }),
   {
     phase: "writing",
     participant_id: "participant-001",
@@ -41,6 +42,7 @@ const rows = [
   ...createMatchingRows({ phase: "post_matching", stimulusId: "stimulus_019", values: [121, 127, 123, 129] }),
   ...createMatchingRows({ phase: "post_matching", stimulusId: "stimulus_018", values: [118, 122, 120, 124] }),
   ...createMatchingRows({ phase: "post_matching", stimulusId: "stimulus_017", values: [116, 120, 118, 122] }),
+  ...createMatchingRows({ phase: "post_matching", stimulusId: "stimulus_016", values: [114, 118, 116, 120] }),
   ...Array.from({ length: 10 }, (_, index) => ({
     phase: "post_sd",
     participant_id: "participant-001",
@@ -57,6 +59,7 @@ const summary = summarizeExperimentRows(rows, {
     { id: "stimulus_019" },
     { id: "stimulus_018" },
     { id: "stimulus_017" },
+    { id: "stimulus_016" },
   ],
   postSdStimuli: Array.from({ length: 10 }, (_, index) => ({
     id: buildStimulusId(20 - index),
@@ -73,12 +76,12 @@ assert.equal(summary.postMatchingTrialCount, summary.expectedCounts.postMatching
 assert.equal(summary.matchingArtworkCount, summary.expectedCounts.matchingArtworkCount);
 assert.deepEqual(summary.directionCounts, {
   pre_matching: {
-    dark_start: 8,
-    bright_start: 8,
+    dark_start: 10,
+    bright_start: 10,
   },
   post_matching: {
-    dark_start: 8,
-    bright_start: 8,
+    dark_start: 10,
+    bright_start: 10,
   },
 });
 assert.equal(summary.matching.artworkMeans.pre_matching.stimulus_020, 134);

@@ -15,7 +15,7 @@ const EXPERIMENT_CONFIG = {
   experimentTitle: "絵画の見えと評価に関するオンライン実験プロトタイプ",
   prototypeStimulusCount: 20,
   sdDisplayMode: "full",
-  controlStimulusCount: 3,
+  controlStimulusCount: 4,
   postSdLowScoreCount: 10,
   writingMinCharacters: 150,
   writingTextareaRows: 12,

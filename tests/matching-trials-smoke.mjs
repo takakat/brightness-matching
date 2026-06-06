@@ -57,6 +57,7 @@ const state = {
     { id: "stimulus_019", label: "Stimulus 019", imagePath: "c1.png" },
     { id: "stimulus_018", label: "Stimulus 018", imagePath: "c2.png" },
     { id: "stimulus_017", label: "Stimulus 017", imagePath: "c3.png" },
+    { id: "stimulus_016", label: "Stimulus 016", imagePath: "c4.png" },
   ],
 };
 
@@ -90,6 +91,7 @@ assert.deepEqual(Object.keys(perArtwork), [
   "stimulus_019",
   "stimulus_018",
   "stimulus_017",
+  "stimulus_016",
 ]);
 
 for (const trials of Object.values(perArtwork)) {

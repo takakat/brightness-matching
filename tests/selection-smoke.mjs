@@ -10,14 +10,14 @@ const sample = Array.from({ length: 20 }, (_, index) => ({
 }));
 
 const selection = selectStimuli(sample, {
-  controlCount: 3,
+  controlCount: 4,
   lowScoreCount: 10,
 });
 
 assert.equal(selection.target.id, "stimulus_001");
 assert.deepEqual(
   selection.controls.map((item) => item.id),
-  ["stimulus_002", "stimulus_003", "stimulus_004"]
+  ["stimulus_002", "stimulus_003", "stimulus_004", "stimulus_005"]
 );
 assert.deepEqual(
   selection.postSdStimuli.map((item) => item.id),
