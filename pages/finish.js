@@ -1,43 +1,3 @@
-function getDataPipeStatusText(state) {
-  const saveState = state.dataPipeSave;
-
-  if (!saveState) {
-    return "Save status pending";
-  }
-
-  if (saveState.status === "saved") {
-    return `Saved to DataPipe (${saveState.filename})`;
-  }
-
-  if (saveState.status === "downloaded") {
-    return `Downloaded CSV (${saveState.filename})`;
-  }
-
-  if (saveState.status === "skipped") {
-    return "Preview mode: data upload skipped";
-  }
-
-  if (saveState.status === "error") {
-    return `Save blocked: ${saveState.message}`;
-  }
-
-  return "Save status pending";
-}
-
-function getMatchingTrialCount(state, phase) {
-  return state.matchingResponses?.[phase]?.length ?? 0;
-}
-
-function getMatchingArtworkCount(state, phase) {
-  const artworkIds = new Set(
-    (state.matchingResponses?.[phase] ?? [])
-      .map((row) => row.stimulus_id)
-      .filter(Boolean)
-  );
-
-  return artworkIds.size;
-}
-
 function renderValidationErrors(state) {
   const errors = state.dataPipeSave?.validationErrors ?? [];
   if (errors.length === 0) {
@@ -46,7 +6,7 @@ function renderValidationErrors(state) {
 
   return `
     <div class="mini-panel" style="margin-bottom: 18px;">
-      <h2>Validation errors</h2>
+      <h2>保存できなかった理由</h2>
       <ul class="compact-list">
         ${errors.map((error) => `<li>${error}</li>`).join("")}
       </ul>
@@ -57,22 +17,41 @@ function renderValidationErrors(state) {
 function getFinishCopy(state) {
   if (state.dataPipeSave?.status === "error") {
     return {
-      eyebrow: "Incomplete",
-      title: "The experiment data was not exported.",
+      eyebrow: "未完了",
+      title: "実験データを保存できませんでした",
       lead:
-        "This session finished with missing required phases, so the CSV export was blocked.",
+        "必要な実験フェーズが不足していたため、データの保存が中止されました。",
       note:
-        "Please keep this tab open while you review the validation summary and rerun the session.",
+        "内容を確認するまで、この画面は閉じないでください。",
     };
   }
 
   return {
-    eyebrow: "Complete",
-    title: "The experiment is complete.",
+    eyebrow: "完了",
+    title: "実験は完了しました",
     lead:
-      "Thank you for your participation. The summary below reflects the data prepared for export at the end of this session.",
-    note: "Please keep this browser tab open until the session fully finishes.",
+      "ご参加ありがとうございました。以下の完了コードをクラウドワークスで報告してください。",
+    note: "完了コードを控えるまで、この画面は閉じないでください。",
   };
+}
+
+function renderCompletionCode(state) {
+  if (!state.completionCode) {
+    return "";
+  }
+
+  const showCode = state.dataPipeSave?.status === "saved" || state.dataPipeSave?.status === "downloaded";
+  if (!showCode) {
+    return "";
+  }
+
+  return `
+    <div class="mini-panel" style="margin-bottom: 18px;">
+      <h2>完了コード</h2>
+      <p class="lead" style="margin-bottom: 8px;">クラウドワークスでの完了報告時に、このコードを入力してください。</p>
+      <p style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 0.08em;">${state.completionCode}</p>
+    </div>
+  `;
 }
 
 export function createFinishTrial({ state }) {
@@ -88,19 +67,7 @@ export function createFinishTrial({ state }) {
           <div class="eyebrow">${finishCopy.eyebrow}</div>
           <h1>${finishCopy.title}</h1>
           <p class="lead">${finishCopy.lead}</p>
-          <div class="mini-panel" style="margin-bottom: 18px;">
-            <h2>Summary</h2>
-            <ul class="compact-list">
-              <li>Data status: ${getDataPipeStatusText(state)}</li>
-              <li>Target artwork: ${state.targetStimulus?.label ?? "Not selected"}</li>
-              <li>Control artwork count: ${state.controlStimuli.length}</li>
-              <li>Post-SD artwork count: ${state.postSdStimuli.length}</li>
-              <li>Pre-matching trial count: ${getMatchingTrialCount(state, "pre_matching")}</li>
-              <li>Pre-matching artwork count: ${getMatchingArtworkCount(state, "pre_matching")}</li>
-              <li>Post-matching trial count: ${getMatchingTrialCount(state, "post_matching")}</li>
-              <li>Post-matching artwork count: ${getMatchingArtworkCount(state, "post_matching")}</li>
-            </ul>
-          </div>
+          ${renderCompletionCode(state)}
           ${renderValidationErrors(state)}
           <p class="summary-note">${finishCopy.note}</p>
         </div>

@@ -1,7 +1,7 @@
 import { EXPERIMENT_CONFIG } from "./config/experiment.js?v=20260528-flow-validation";
 import { CONDITION_ASSIGNMENT_CONFIG } from "./config/conditions.js?v=20260526-datapipe-conditions";
 import { getPreloadImages, getEnabledStimuli } from "./config/stimuli.js";
-import { EVALUATION_KEYS, getSdQuestions } from "./config/scales.js";
+import { EVALUATION_KEYS, getSdQuestions } from "./config/scales.js?v=20260605-sd16";
 import {
   assignParticipantConditionWithDataPipe,
   buildManualConditionAssignment,
@@ -11,18 +11,33 @@ import { buildAnalysisCsv } from "./logic/analysisExport.js?v=20260528-analysis-
 import { summarizeExperimentRows } from "./logic/dataSummary.js?v=20260528-flow-validation";
 import { selectStimuli } from "./logic/selection.js";
 import { getTestScenarioId, isTestMode } from "./logic/testScenario.js";
-import { createConsentTrial } from "./pages/consent.js?v=20260604-consent-demographics";
-import { createFinishTrial } from "./pages/finish.js?v=20260528-flow-validation";
+import { createConsentTrial } from "./pages/consent.js?v=20260605-consent-layout";
+import { createFinishTrial } from "./pages/finish.js?v=20260605-finish-ja";
 import { createIntroTrial } from "./pages/intro.js?v=20260528-production-mode";
-import { buildMatchingPlan, createMatchingLoop } from "./pages/matching.js?v=20260528-flow-validation";
+import { buildMatchingPlan, createMatchingLoop } from "./pages/matching.js?v=20260604-matching-copy";
 import { createPreSdTimeline, createPostSdLoop } from "./pages/sdScale.js?v=20260526-datapipe-conditions";
-import { createWritingTrial } from "./pages/writing.js?v=20260528-flow-validation";
+import { createWritingTrial } from "./pages/writing.js?v=20260605-writing-inline";
 
 const { initJsPsych, jsPsychPreload, jsPsychCallFunction } = window;
 const SAVE_MODES = {
   datapipe: "datapipe",
   download: "download",
 };
+
+function createCompletionCode(length = 10) {
+  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const randomValues = new Uint32Array(length);
+
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(randomValues);
+  } else {
+    for (let index = 0; index < length; index += 1) {
+      randomValues[index] = Math.floor(Math.random() * 4294967296);
+    }
+  }
+
+  return Array.from(randomValues, (value) => characters[value % characters.length]).join("");
+}
 
 function renderAssignmentError(message) {
   document.body.innerHTML = `
@@ -237,16 +252,20 @@ try {
 
 const activeStimuli = getEnabledStimuli(EXPERIMENT_CONFIG.prototypeStimulusCount);
 const preloadImages = getPreloadImages(EXPERIMENT_CONFIG.prototypeStimulusCount);
-const sdQuestions = getSdQuestions(EXPERIMENT_CONFIG.sdDisplayMode);
+const sdQuestions = getSdQuestions(EXPERIMENT_CONFIG.sdDisplayMode, {
+  participantId: conditionAssignment.participantId,
+});
 
 const state = {
   subjectId: conditionAssignment.participantId,
   participantId: conditionAssignment.participantId,
+  completionCode: createCompletionCode(),
   assignedCondition: conditionAssignment.condition,
   assignedConditionSource: conditionAssignment.source,
   assignedConditionIndex: conditionAssignment.conditionIndex ?? null,
   activeStimuli,
   preResults: [],
+  highestRatedStimulus: null,
   targetStimulus: null,
   controlStimuli: [],
   postSdStimuli: [],
@@ -281,6 +300,7 @@ const jsPsych = initJsPsych({
 jsPsych.data.addProperties({
   subject_id: state.subjectId,
   participant_id: state.participantId,
+  completion_code: state.completionCode,
   condition_id: state.assignedCondition.id,
   condition_label: state.assignedCondition.label,
   condition_index: state.assignedConditionIndex,
@@ -350,6 +370,7 @@ function resetMatchingState(experimentState) {
 
 function assignSelectionState(experimentState, selection) {
   experimentState.preResults = selection.ranked;
+  experimentState.highestRatedStimulus = selection.ranked[selection.ranked.length - 1] ?? null;
   experimentState.targetStimulus = selection.target;
   experimentState.controlStimuli = selection.controls;
   experimentState.postSdStimuli = selection.postSdStimuli;

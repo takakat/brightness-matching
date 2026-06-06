@@ -93,9 +93,9 @@ const TEST_MATRIX = [
       targetId: buildStimulusId(1),
       controlIds: [buildStimulusId(2), buildStimulusId(3), buildStimulusId(4)],
       postSdIds: buildStimulusRange(1, 10),
-      writingStimulusId: buildStimulusId(2),
+      writingStimulusId: buildStimulusId(20),
       writingTaskStimulusRole: "non_target",
-      writingAnalysisRole: "control",
+      writingAnalysisRole: "prototype_only",
     },
   },
 ];
@@ -564,11 +564,16 @@ function assertFinalResult({
   const uploadSummary = result.dataPipeUploadSummary;
   const phaseCounts = result.phaseCounts ?? {};
   const writingRows = result.rows.filter((row) => row.phase === "writing");
+  const completionCode = result.experimentState?.completionCode;
 
   assertCondition(saveResult, `${scenarioLabel}: dataPipeSaveResult was not available.`);
   assert.equal(saveResult.status, "downloaded");
   assertCondition(uploadSummary, `${scenarioLabel}: dataPipeUploadSummary was not available.`);
   assert.deepEqual(uploadSummary.validationErrors ?? [], []);
+  assertCondition(
+    typeof completionCode === "string" && /^[A-Z2-9]{10}$/.test(completionCode),
+    `${scenarioLabel}: completion code was missing or malformed.`
+  );
 
   assert.equal(phaseCounts.pre_sd, expectedCounts.preSd);
   assert.equal(phaseCounts.pre_matching, expectedCounts.preMatching);
@@ -593,6 +598,7 @@ function assertFinalResult({
   assert.equal(csvPhaseCounts.post_sd, expectedCounts.postSd);
 
   const firstCsvRecord = csvRecords[0];
+  assert.equal(firstCsvRecord.completion_code, completionCode);
   assert.equal(firstCsvRecord.prototype_stimulus_count, String(EXPERIMENT_CONFIG.prototypeStimulusCount));
   assert.equal(firstCsvRecord.condition_id, definition.conditionId);
   assert.equal(firstCsvRecord.selected_target_stimulus_id, definition.expectedSelection.targetId);
@@ -609,6 +615,7 @@ function assertFinalResult({
 
   const writingRow = csvRecords.find((row) => row.phase === "writing");
   assertCondition(writingRow, `${scenarioLabel}: writing row missing from CSV.`);
+  assert.equal(writingRow.completion_code, completionCode);
   assert.equal(writingRow.stimulus_id, definition.expectedSelection.writingStimulusId);
   assert.equal(
     writingRow.writing_task_stimulus_role,

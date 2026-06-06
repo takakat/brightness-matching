@@ -5,10 +5,10 @@ const TEST_SCENARIO_IDS = [
   "tie_blocks",
 ];
 
-const EVALUATION_KEYS = ["beauty", "like", "good", "interest"];
-const BRIGHTNESS_KEYS = ["bright", "fun", "warm", "heavy"];
-const ACTIVITY_KEYS = ["dynamic", "strong", "showy", "unique"];
-const TEXTURE_KEYS = ["soft", "loose", "sharp"];
+const EVALUATION_KEYS = ["good", "beauty", "like", "pleasant"];
+const BRIGHTNESS_KEYS = ["bright", "cheerful", "warm", "fun"];
+const ACTIVITY_KEYS = ["dynamic", "stable", "unique", "showy"];
+const SOFTNESS_KEYS = ["loose", "relaxed", "calm", "soft"];
 
 function resolveSearchParams(searchParams) {
   if (searchParams instanceof URLSearchParams) {
@@ -45,7 +45,7 @@ function buildBaseResponse({ evaluationSum, brightnessSum }) {
     response[key] = 5;
   }
 
-  for (const key of TEXTURE_KEYS) {
+  for (const key of SOFTNESS_KEYS) {
     response[key] = 5;
   }
 

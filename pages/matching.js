@@ -71,7 +71,9 @@ function createMatchingHtml({ stimulus }) {
   return `
     <div class="matching-shell" style="${stageStyle}">
       <div class="matching-card">
-        <div class="matching-instruction-slot" aria-label="instruction-slot"></div>
+        <div class="matching-instruction-slot" aria-label="instruction-slot">
+          <p>絵画の明るさの印象と同じになるように右の比較刺激を調整してください</p>
+        </div>
         <div class="matching-layout">
           <div class="matching-stage">
             <div class="matching-target-column">
@@ -88,11 +90,10 @@ function createMatchingHtml({ stimulus }) {
           <div class="matching-controls-panel">
             <div class="matching-controls">
               <div class="key-hint">
-                <p style="margin: 0 0 8px;"><strong>Controls</strong></p>
+                <p style="margin: 0 0 8px;"><strong>操作方法</strong></p>
                 <ul class="compact-list">
-                  <li>A / Left Arrow: darker by 1 step</li>
-                  <li>D / Right Arrow: brighter by 1 step</li>
-                  <li>Hold Shift to move by 8 steps</li>
+                  <li>A キー / 左矢印キー: 1段階暗くする</li>
+                  <li>D キー / 右矢印キー: 1段階明るくする</li>
                 </ul>
               </div>
             </div>

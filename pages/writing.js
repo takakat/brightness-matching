@@ -36,9 +36,27 @@ function getAssignedCondition(state) {
   return state.assignedCondition ?? getConditionById(DEFAULT_CONDITION_ID);
 }
 
+function getHighestRatedStimulus(state) {
+  if (state.highestRatedStimulus) {
+    return state.highestRatedStimulus;
+  }
+
+  const fallbackEntry = state.preResults?.[state.preResults.length - 1];
+  if (fallbackEntry) {
+    return {
+      id: fallbackEntry.id,
+      label: fallbackEntry.label,
+      imagePath: fallbackEntry.imagePath,
+      displayOrder: fallbackEntry.displayOrder,
+    };
+  }
+
+  return state.controlStimuli?.[0] ?? state.targetStimulus;
+}
+
 export function getWritingStimulus(state, condition = getAssignedCondition(state)) {
   if (condition.writingTask.stimulusRole === "non_target") {
-    return state.controlStimuli[0] ?? state.targetStimulus;
+    return getHighestRatedStimulus(state);
   }
 
   return state.targetStimulus;
@@ -79,8 +97,6 @@ export function createWritingTrial({ state }) {
                 ${renderInstructionParagraphs(currentCondition)}
               </div>
             </div>
-          </div>
-          <div class="writing-text-column">
             <div class="writing-form-slot"></div>
           </div>
         </div>

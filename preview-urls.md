@@ -66,6 +66,33 @@ Preview matching uses target-only plans so that each matching preview stays smal
 - Example:
   - [http://127.0.0.1:8123/online-experiment/index.html?preview=writing&condition=irrelevant_control](http://127.0.0.1:8123/online-experiment/index.html?preview=writing&condition=irrelevant_control)
 
+## Writing preview by condition
+
+- `counter_attitudinal`
+  - [http://127.0.0.1:8123/online-experiment/index.html?preview=writing&condition=counter_attitudinal](http://127.0.0.1:8123/online-experiment/index.html?preview=writing&condition=counter_attitudinal)
+- `objective_description_control`
+  - [http://127.0.0.1:8123/online-experiment/index.html?preview=writing&condition=objective_description_control](http://127.0.0.1:8123/online-experiment/index.html?preview=writing&condition=objective_description_control)
+- `irrelevant_control`
+  - [http://127.0.0.1:8123/online-experiment/index.html?preview=writing&condition=irrelevant_control](http://127.0.0.1:8123/online-experiment/index.html?preview=writing&condition=irrelevant_control)
+
+## Consent preview by condition
+
+- `counter_attitudinal`
+  - [http://127.0.0.1:8123/online-experiment/index.html?preview=consent&condition=counter_attitudinal](http://127.0.0.1:8123/online-experiment/index.html?preview=consent&condition=counter_attitudinal)
+- `objective_description_control`
+  - [http://127.0.0.1:8123/online-experiment/index.html?preview=consent&condition=objective_description_control](http://127.0.0.1:8123/online-experiment/index.html?preview=consent&condition=objective_description_control)
+- `irrelevant_control`
+  - [http://127.0.0.1:8123/online-experiment/index.html?preview=consent&condition=irrelevant_control](http://127.0.0.1:8123/online-experiment/index.html?preview=consent&condition=irrelevant_control)
+
+## Full run by condition
+
+- `counter_attitudinal`
+  - [http://127.0.0.1:8123/online-experiment/index.html?condition=counter_attitudinal&save=download](http://127.0.0.1:8123/online-experiment/index.html?condition=counter_attitudinal&save=download)
+- `objective_description_control`
+  - [http://127.0.0.1:8123/online-experiment/index.html?condition=objective_description_control&save=download](http://127.0.0.1:8123/online-experiment/index.html?condition=objective_description_control&save=download)
+- `irrelevant_control`
+  - [http://127.0.0.1:8123/online-experiment/index.html?condition=irrelevant_control&save=download](http://127.0.0.1:8123/online-experiment/index.html?condition=irrelevant_control&save=download)
+
 - `participant_id=<id>` forces a participant id for local checks.
 - Example:
   - [http://127.0.0.1:8123/online-experiment/index.html?participant_id=test001](http://127.0.0.1:8123/online-experiment/index.html?participant_id=test001)

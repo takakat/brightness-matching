@@ -11,12 +11,21 @@ export function createConsentTrial() {
     signature: isTestMode ? "Test User" : "",
   };
 
+  const metadataHtml = CONSENT_TEXT.metadataRows
+    .map(
+      (row) => `
+        <div class="consent-meta-label">${row.label}</div>
+        <div class="consent-meta-value">${row.value}</div>
+      `
+    )
+    .join("");
+
   const sectionHtml = CONSENT_TEXT.sections
     .map(
       (section) => `
-        <section style="margin-bottom: 16px;">
-          <h3 style="margin-bottom: 8px;">${section.heading}</h3>
-          <p style="margin: 0;">${section.body}</p>
+        <section class="consent-document-section">
+          <h3>${section.heading}</h3>
+          <p>${section.body.replace(/\n/g, "<br>")}</p>
         </section>
       `
     )
@@ -25,7 +34,7 @@ export function createConsentTrial() {
   const checklistHtml = CONSENT_TEXT.checklist
     .map(
       (item, index) => `
-        <label>
+        <label class="consent-check-item">
           <input type="checkbox" data-consent-index="${index}">
           <span>${item}</span>
         </label>
@@ -41,7 +50,8 @@ export function createConsentTrial() {
 
     return (
       consentState.agreedItems.every(Boolean) &&
-      consentState.gender.length > 0 &&
+      consentState.date.trim().length > 0 &&
+      consentState.gender.trim().length > 0 &&
       hasValidAge &&
       consentState.signature.trim().length > 0
     );
@@ -60,47 +70,58 @@ export function createConsentTrial() {
     type: jsPsychHtmlButtonResponse,
     stimulus: `
       <div class="consent-card">
-        <div class="eyebrow">Consent</div>
-        <h1>${CONSENT_TEXT.title}</h1>
-        <p class="lead">内容を確認し、すべての確認項目にチェックしたうえで次へ進んでください。</p>
+        <h1 class="consent-title">${CONSENT_TEXT.title}</h1>
 
-        <div class="consent-scroll">
+        <div class="consent-meta-table">
+          ${metadataHtml}
+        </div>
+
+        <div class="consent-document">
+          <h2>${CONSENT_TEXT.documentTitle}</h2>
           ${sectionHtml}
+          <div class="consent-document-note">
+            ${CONSENT_TEXT.acknowledgement}
+          </div>
         </div>
 
-        <div class="consent-checklist">
-          ${checklistHtml}
+        <div class="consent-agreement-panel">
+          <h2>${CONSENT_TEXT.agreementTitle}</h2>
+          <div class="consent-checklist">
+            ${checklistHtml}
+          </div>
+          <p class="consent-agreement-statement">${CONSENT_TEXT.agreementStatement}</p>
+          <div class="consent-field-row consent-field-row-single">
+            <label class="consent-inline-field">
+              <span>${CONSENT_TEXT.dateLabel}:</span>
+              <input id="consent-date-input" type="date" value="${consentState.date}">
+            </label>
+          </div>
+          <div class="consent-field-row">
+            <label class="consent-inline-field">
+              <span>年齢:</span>
+              <input id="consent-age-input" type="number" inputmode="numeric" min="0" max="120" placeholder="例: 25" value="${consentState.age}">
+            </label>
+            <label class="consent-inline-field">
+              <span>性別:</span>
+              <select id="consent-gender-input">
+                <option value="">選択してください</option>
+                <option value="female"${consentState.gender === "female" ? " selected" : ""}>女性</option>
+                <option value="male"${consentState.gender === "male" ? " selected" : ""}>男性</option>
+                <option value="other"${consentState.gender === "other" ? " selected" : ""}>その他</option>
+                <option value="prefer_not_to_say"${consentState.gender === "prefer_not_to_say" ? " selected" : ""}>回答しない</option>
+              </select>
+            </label>
+          </div>
+          <div class="consent-field-row consent-field-row-single">
+            <label class="consent-inline-field">
+              <span>${CONSENT_TEXT.signatureLabel}:</span>
+              <input id="consent-signature-input" type="text" placeholder="氏名を入力してください" value="${consentState.signature}">
+            </label>
+          </div>
         </div>
-
-        <div class="consent-grid">
-          <label>
-            日付
-            <input id="consent-date-input" type="date" value="${consentState.date}">
-          </label>
-          <label>
-            性別
-            <select id="consent-gender-input">
-              <option value="">選択してください</option>
-              <option value="female"${consentState.gender === "female" ? " selected" : ""}>女性</option>
-              <option value="male"${consentState.gender === "male" ? " selected" : ""}>男性</option>
-              <option value="other"${consentState.gender === "other" ? " selected" : ""}>その他</option>
-              <option value="prefer_not_to_say"${consentState.gender === "prefer_not_to_say" ? " selected" : ""}>回答しない</option>
-            </select>
-          </label>
-          <label>
-            年齢
-            <input id="consent-age-input" type="number" inputmode="numeric" min="0" max="120" placeholder="例: 25" value="${consentState.age}">
-          </label>
-          <label>
-            氏名または識別名
-            <input id="consent-signature-input" type="text" placeholder="記録用の名前を入力してください" value="${consentState.signature}">
-          </label>
-        </div>
-
-        <p class="consent-hint">取得したデータは DataPipe を経由して OSF の保存先へ送信されます。</p>
       </div>
     `,
-    choices: ["同意して次へ進む"],
+    choices: ["実験を開始する"],
     on_load: () => {
       document.querySelectorAll("[data-consent-index]").forEach((checkbox) => {
         checkbox.addEventListener("change", (event) => {
@@ -120,6 +141,7 @@ export function createConsentTrial() {
 
       dateInput.addEventListener("change", (event) => {
         consentState.date = event.target.value;
+        updateButtonState();
       });
 
       genderInput.addEventListener("change", (event) => {

@@ -16,7 +16,7 @@ const PHASE_ORDER = {
 
 const ANALYSIS_PHASES = new Set(Object.keys(PHASE_ORDER));
 const ACTIVITY_KEYS = SD_ITEM_BANK.filter((item) => item.factor === "activity").map((item) => item.name);
-const TEXTURE_KEYS = SD_ITEM_BANK.filter((item) => item.factor === "texture").map((item) => item.name);
+const SOFTNESS_KEYS = SD_ITEM_BANK.filter((item) => item.factor === "softness").map((item) => item.name);
 
 export const ANALYSIS_CSV_COLUMNS = [
   "record_index",
@@ -25,6 +25,7 @@ export const ANALYSIS_CSV_COLUMNS = [
   "phase_trial_index",
   "participant_id",
   "subject_id",
+  "completion_code",
   "condition_id",
   "condition_label",
   "condition_index",
@@ -59,22 +60,23 @@ export const ANALYSIS_CSV_COLUMNS = [
   "sd_beauty",
   "sd_like",
   "sd_good",
-  "sd_interest",
+  "sd_pleasant",
   "sd_dynamic",
-  "sd_strong",
-  "sd_showy",
+  "sd_stable",
   "sd_unique",
+  "sd_showy",
   "sd_bright",
-  "sd_fun",
+  "sd_cheerful",
   "sd_warm",
-  "sd_heavy",
-  "sd_soft",
+  "sd_fun",
   "sd_loose",
-  "sd_sharp",
+  "sd_relaxed",
+  "sd_calm",
+  "sd_soft",
   "evaluation_score",
   "brightness_score",
   "activity_score",
-  "texture_score",
+  "softness_score",
   "matching_trial_index_within_artwork",
   "matching_start_direction",
   "matching_initial_value",
@@ -248,6 +250,7 @@ function resolveMetaRows(rows, experimentState) {
   return {
     participantId: experimentState.participantId ?? firstRow.participant_id ?? null,
     subjectId: experimentState.subjectId ?? firstRow.subject_id ?? null,
+    completionCode: experimentState.completionCode ?? firstRow.completion_code ?? null,
     conditionId: experimentState.assignedCondition?.id ?? firstRow.condition_id ?? null,
     conditionLabel: experimentState.assignedCondition?.label ?? firstRow.condition_label ?? null,
     conditionIndex: normalizeNumber(experimentState.assignedConditionIndex ?? firstRow.condition_index),
@@ -304,6 +307,7 @@ function buildBaseRecord({
     phase_trial_index: phaseCounts[row.phase],
     participant_id: meta.participantId,
     subject_id: meta.subjectId,
+    completion_code: meta.completionCode,
     condition_id: meta.conditionId,
     condition_label: meta.conditionLabel,
     condition_index: meta.conditionIndex,
@@ -353,7 +357,7 @@ function buildSdRecord(baseRecord, row) {
     evaluation_score: normalizeNumber(row.evaluation_score) ?? meanFromKeys(response, EVALUATION_KEYS),
     brightness_score: meanFromKeys(response, BRIGHTNESS_KEYS),
     activity_score: meanFromKeys(response, ACTIVITY_KEYS),
-    texture_score: meanFromKeys(response, TEXTURE_KEYS),
+    softness_score: meanFromKeys(response, SOFTNESS_KEYS),
   };
 }
 

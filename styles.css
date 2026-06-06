@@ -125,14 +125,73 @@ label,
   padding: 28px;
 }
 
-.consent-scroll {
-  max-height: 320px;
-  overflow-y: auto;
-  margin: 18px 0;
-  padding: 20px;
-  border-radius: 14px;
-  background: var(--surface-muted);
+.consent-title {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.consent-meta-table {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
   border: 1px solid var(--border-color);
+  margin-bottom: 24px;
+}
+
+.consent-meta-label,
+.consent-meta-value {
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 16px;
+}
+
+.consent-meta-label {
+  background: #f1f2f3;
+  font-weight: 700;
+}
+
+.consent-meta-value {
+  border-left: 1px solid var(--border-color);
+  background: #fff;
+}
+
+.consent-meta-table > :nth-last-child(-n + 2) {
+  border-bottom: none;
+}
+
+.consent-document,
+.consent-agreement-panel {
+  margin-top: 24px;
+  padding: 26px 28px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  background: #fff;
+}
+
+.consent-document h2,
+.consent-agreement-panel h2 {
+  margin-bottom: 22px;
+}
+
+.consent-document-section {
+  margin-bottom: 22px;
+}
+
+.consent-document-section h3 {
+  margin-bottom: 8px;
+}
+
+.consent-document-section p {
+  margin: 0;
+  white-space: normal;
+}
+
+.consent-document-note {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border-color);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.8;
 }
 
 .consent-checklist {
@@ -141,23 +200,52 @@ label,
   margin: 18px 0 22px;
 }
 
-.consent-checklist label {
+.consent-check-item {
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
+  gap: 14px;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 17px;
 }
 
-.consent-grid {
+.consent-check-item input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+  margin: 0;
+}
+
+.consent-agreement-statement {
+  margin: 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+  font-size: 18px;
+  line-height: 1.8;
+}
+
+.consent-field-row {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-bottom: 10px;
+  margin-top: 22px;
 }
 
-.consent-grid label {
+.consent-field-row-single {
+  grid-template-columns: 1fr;
+}
+
+.consent-inline-field {
   display: grid;
-  gap: 6px;
-  font-weight: 600;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.consent-inline-field select,
+.consent-inline-field input {
+  width: 100%;
+}
+
+.consent-inline-field span {
+  font-size: 17px;
 }
 
 input[type="text"],
@@ -215,7 +303,12 @@ textarea {
 }
 
 .matching-instruction-slot {
-  min-height: 136px;
+  min-height: 56px;
+  margin-bottom: 8px;
+}
+
+.matching-instruction-slot p {
+  margin: 0;
 }
 
 .matching-layout {
@@ -330,21 +423,14 @@ textarea {
   --writing-reference-width: 320px;
   --writing-layout-width: 760px;
   --writing-text-column-width: 760px;
-  width: var(--writing-layout-width);
-  min-width: var(--writing-layout-width);
+  width: min(var(--writing-layout-width), 100%);
   margin: 0 auto;
-  display: grid;
-  grid-template-columns: var(--writing-text-column-width);
-  gap: 18px;
-  align-items: start;
-}
-
-.writing-text-column {
-  width: var(--writing-text-column-width);
+  display: block;
+  box-sizing: border-box;
 }
 
 .writing-reference-block {
-  width: var(--writing-text-column-width);
+  width: 100%;
   padding: 28px;
   border-radius: 20px;
   background: var(--surface-color);
@@ -359,7 +445,7 @@ textarea {
 .writing-reference-row {
   width: 100%;
   display: grid;
-  grid-template-columns: var(--writing-image-width) minmax(0, 1fr);
+  grid-template-columns: minmax(220px, var(--writing-image-width)) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
@@ -370,30 +456,37 @@ textarea {
 
 .writing-prompt-block {
   width: 100%;
+  text-align: left;
 }
 
 .writing-form-slot {
-  width: var(--writing-text-column-width);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .writing-form-slot #jspsych-survey-text-form {
   display: grid;
   gap: 18px;
-  padding: 28px;
-  border-radius: 20px;
-  background: var(--surface-color);
-  border: 1px solid var(--border-color);
-  box-shadow: 0 18px 50px var(--shadow-color);
+  padding-top: 8px;
+  width: 100%;
   box-sizing: border-box;
 }
 
 .writing-form-slot .jspsych-survey-text-question {
   margin: 0;
+  width: 100%;
 }
 
 .writing-form-slot .jspsych-survey-text-question textarea {
+  width: 100%;
+  max-width: 100%;
   height: 200px;
   resize: vertical;
+  box-sizing: border-box;
+}
+
+.writing-form-slot .jspsych-btn {
+  width: 100%;
 }
 
 .debug-table {
@@ -442,7 +535,12 @@ textarea {
 
 @media (max-width: 860px) {
   .split-grid,
-  .consent-grid {
+  .consent-meta-table,
+  .consent-field-row {
+    grid-template-columns: 1fr;
+  }
+
+  .writing-reference-row {
     grid-template-columns: 1fr;
   }
 

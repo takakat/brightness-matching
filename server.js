@@ -20,7 +20,9 @@ const MIME_TYPES = {
 
 function resolveRequestPath(requestUrl = "/") {
   const pathname = new URL(requestUrl, "http://localhost").pathname;
-  return pathname === "/" ? "/index.html" : pathname;
+  const normalizedPath =
+    pathname === "/" ? "/index.html" : pathname.replace(/^\/online-experiment(?=\/|$)/, "");
+  return normalizedPath || "/index.html";
 }
 
 function sendNotFound(res) {

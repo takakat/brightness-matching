@@ -11,6 +11,7 @@ const controlStimuli = [
 
 const state = {
   targetStimulus,
+  highestRatedStimulus: { id: "stimulus_001", label: "Stimulus 001" },
   controlStimuli,
 };
 
@@ -24,7 +25,7 @@ assert.equal(
 );
 assert.equal(
   getWritingStimulus(state, getConditionById("irrelevant_control")).id,
-  controlStimuli[0].id
+  state.highestRatedStimulus.id
 );
 
 console.log(
