@@ -216,9 +216,25 @@ async function saveExperimentData({ jsPsych, experimentState }) {
     throw new Error(message);
   }
 
+  let localDownloadResult = {
+    downloaded: false,
+  };
+  let localDownloadError = null;
+
+  try {
+    localDownloadResult = downloadExperimentData({
+      filename: savePayload.filename,
+      csvData: savePayload.csvData,
+    });
+  } catch (error) {
+    localDownloadError = error instanceof Error ? error.message : String(error);
+  }
+
   return {
     skipped: false,
-    downloaded: false,
+    downloaded: localDownloadResult.downloaded,
+    dataPipeSaved: true,
+    localDownloadError,
     filename: savePayload.filename,
     summary: savePayload.summary,
     mode: SAVE_MODES.datapipe,
@@ -479,7 +495,9 @@ function createDataSaveTrial() {
               ? "error"
               : result.skipped
                 ? "skipped"
-                : result.downloaded
+                : result.dataPipeSaved && result.downloaded
+                  ? "saved_and_downloaded"
+                  : result.downloaded
                   ? "downloaded"
                   : "saved",
             ...result,
