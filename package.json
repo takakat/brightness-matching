@@ -8,7 +8,7 @@
     "build:pages": "node scripts/prepare-pages.mjs",
     "export:standalone": "node scripts/export-standalone.mjs",
     "start": "node server.js",
-    "test:smoke": "node tests/condition-assignment-smoke.mjs && node tests/selection-smoke.mjs && node tests/matching-trials-smoke.mjs && node tests/writing-stimulus-smoke.mjs && node tests/data-validation-smoke.mjs && node tests/data-summary-smoke.mjs && node tests/analysis-export-smoke.mjs && node tests/sd-order-smoke.mjs",
+    "test:smoke": "node tests/condition-assignment-smoke.mjs && node tests/selection-smoke.mjs && node tests/matching-trials-smoke.mjs && node tests/writing-stimulus-smoke.mjs && node tests/data-validation-smoke.mjs && node tests/data-summary-smoke.mjs && node tests/analysis-export-smoke.mjs && node tests/sd-order-smoke.mjs && node tests/stimulus-order-smoke.mjs",
     "test:e2e": "node test-production.js",
     "test": "start-server-and-test start http://localhost:8080 test:e2e"
   },

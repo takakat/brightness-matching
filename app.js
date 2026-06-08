@@ -1,6 +1,6 @@
 import { EXPERIMENT_CONFIG } from "./config/experiment.js?v=20260528-flow-validation";
 import { CONDITION_ASSIGNMENT_CONFIG } from "./config/conditions.js?v=20260526-datapipe-conditions";
-import { getPreloadImages, getEnabledStimuli } from "./config/stimuli.js";
+import { getPreloadImages, getEnabledStimuli, shuffleStimuliForParticipant } from "./config/stimuli.js";
 import { EVALUATION_KEYS, getSdQuestions } from "./config/scales.js?v=20260605-sd16";
 import {
   assignParticipantConditionWithDataPipe,
@@ -255,6 +255,25 @@ function publishConditionAssignmentDebug({ conditionAssignment, searchParams, pr
   ]);
 }
 
+function publishStimulusOrderDebug(experimentState) {
+  const debugPayload = {
+    participantId: experimentState.participantId,
+    stimulusIds: experimentState.activeStimuli.map((stimulus) => stimulus.id),
+    sourceDisplayOrders: experimentState.activeStimuli.map((stimulus) => stimulus.displayOrder),
+  };
+
+  window.stimulusOrderDebug = debugPayload;
+  console.info("[experiment] stimulus presentation order", debugPayload);
+  console.table(
+    experimentState.activeStimuli.map((stimulus, index) => ({
+      presentationOrder: index + 1,
+      stimulusId: stimulus.id,
+      sourceDisplayOrder: stimulus.displayOrder,
+      sourceFilename: stimulus.sourceFilename,
+    }))
+  );
+}
+
 const searchParams = new URLSearchParams(window.location.search);
 const previewMode = searchParams.get("preview");
 const testMode = isTestMode(searchParams);
@@ -279,7 +298,10 @@ try {
   throw error;
 }
 
-const activeStimuli = getEnabledStimuli(EXPERIMENT_CONFIG.prototypeStimulusCount);
+const activeStimuli = shuffleStimuliForParticipant(
+  getEnabledStimuli(EXPERIMENT_CONFIG.prototypeStimulusCount),
+  conditionAssignment.participantId
+);
 const preloadImages = getPreloadImages(EXPERIMENT_CONFIG.prototypeStimulusCount);
 const sdQuestions = getSdQuestions(EXPERIMENT_CONFIG.sdDisplayMode, {
   participantId: conditionAssignment.participantId,
@@ -326,6 +348,7 @@ publishConditionAssignmentDebug({
   testMode,
   saveMode,
 });
+publishStimulusOrderDebug(state);
 
 const jsPsych = initJsPsych({
   on_finish: () => {
