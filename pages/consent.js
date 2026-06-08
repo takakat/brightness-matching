@@ -1,7 +1,7 @@
 import { CONSENT_TEXT } from "../config/experiment.js";
 
 export function createConsentTrial() {
-  const { jsPsychHtmlButtonResponse } = window;
+  const { jsPsychHtmlKeyboardResponse } = window;
   const isTestMode = new URLSearchParams(window.location.search).get("test") === "true";
   const consentState = {
     agreedItems: new Array(CONSENT_TEXT.checklist.length).fill(isTestMode),
@@ -80,7 +80,7 @@ export function createConsentTrial() {
   }
 
   function updateButtonState() {
-    const button = document.getElementById("jspsych-html-button-response-button-0");
+    const button = document.getElementById("consent-submit-button");
     if (!button) {
       return;
     }
@@ -98,7 +98,7 @@ export function createConsentTrial() {
   }
 
   return {
-    type: jsPsychHtmlButtonResponse,
+    type: jsPsychHtmlKeyboardResponse,
     stimulus: `
       <div class="consent-card">
         <h1 class="consent-title">${CONSENT_TEXT.title}</h1>
@@ -152,7 +152,7 @@ export function createConsentTrial() {
         </div>
       </div>
     `,
-    choices: ["実験を開始する"],
+    choices: "NO_KEYS",
     on_load: () => {
       document.querySelectorAll("[data-consent-index]").forEach((checkbox) => {
         checkbox.addEventListener("change", (event) => {
@@ -181,6 +181,11 @@ export function createConsentTrial() {
       validationMessage.setAttribute("aria-live", "polite");
       signatureInput.closest(".consent-field-row")?.after(validationMessage);
 
+      const submitRow = document.createElement("div");
+      submitRow.className = "consent-submit-row";
+      submitRow.innerHTML = `<button id="consent-submit-button" class="jspsych-btn" type="button">実験を開始する</button>`;
+      validationMessage.after(submitRow);
+
       dateInput.addEventListener("change", (event) => {
         consentState.date = event.target.value;
         updateButtonState();
@@ -201,18 +206,23 @@ export function createConsentTrial() {
         updateButtonState();
       });
 
-      document.addEventListener(
-        "click",
-        (event) => {
-          const button = event.target.closest?.("#jspsych-html-button-response-button-0");
-          if (button && !isConsentComplete()) {
-            event.preventDefault();
-            event.stopPropagation();
-            updateButtonState();
-          }
-        },
-        true
-      );
+      document.getElementById("consent-submit-button").addEventListener("click", () => {
+        if (!isConsentComplete()) {
+          updateButtonState();
+          return;
+        }
+
+        document.getElementById("consent-submit-button").disabled = true;
+        window.experimentJsPsych.finishTrial({
+          phase: "consent",
+          consent_date: consentState.date,
+          consent_gender: consentState.gender,
+          consent_age: Number(consentState.age),
+          consent_signature: consentState.signature.trim(),
+          consent_agreed_count: consentState.agreedItems.filter(Boolean).length,
+          consent_complete: true,
+        });
+      });
 
       updateButtonState();
     },

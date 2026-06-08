@@ -256,6 +256,10 @@ label,
   font-weight: 700;
 }
 
+.consent-submit-row {
+  margin-top: 20px;
+}
+
 input[type="text"],
 input[type="date"],
 textarea {

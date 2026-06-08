@@ -11,7 +11,7 @@ import { buildAnalysisCsv } from "./logic/analysisExport.js?v=20260528-analysis-
 import { summarizeExperimentRows } from "./logic/dataSummary.js?v=20260528-flow-validation";
 import { selectStimuli } from "./logic/selection.js";
 import { getTestScenarioId, isTestMode } from "./logic/testScenario.js";
-import { createConsentTrial } from "./pages/consent.js?v=20260605-consent-layout";
+import { createConsentTrial } from "./pages/consent.js?v=20260608-consent-guard";
 import { createFinishTrial } from "./pages/finish.js?v=20260605-finish-ja";
 import { createIntroTrial } from "./pages/intro.js?v=20260528-production-mode";
 import { buildMatchingPlan, createMatchingLoop } from "./pages/matching.js?v=20260604-matching-copy";
@@ -371,6 +371,7 @@ const jsPsych = initJsPsych({
     window.experimentState = state;
   },
 });
+window.experimentJsPsych = jsPsych;
 
 jsPsych.data.addProperties({
   subject_id: state.subjectId,
