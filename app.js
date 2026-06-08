@@ -226,6 +226,35 @@ async function saveExperimentData({ jsPsych, experimentState }) {
   };
 }
 
+function publishConditionAssignmentDebug({ conditionAssignment, searchParams, previewMode, testMode, saveMode }) {
+  const debugPayload = {
+    participantId: conditionAssignment.participantId,
+    conditionId: conditionAssignment.condition.id,
+    conditionLabel: conditionAssignment.condition.label,
+    conditionIndex: conditionAssignment.conditionIndex ?? null,
+    source: conditionAssignment.source,
+    dataPipeExperimentId: EXPERIMENT_CONFIG.dataPipe.experimentId,
+    dataPipeEnvironment: EXPERIMENT_CONFIG.dataPipe.environmentName,
+    dataPipeConditionAssignmentEnabled: EXPERIMENT_CONFIG.dataPipe.useConditionAssignment,
+    saveMode,
+    previewMode: previewMode ?? "",
+    testMode,
+    urlCondition: searchParams.get(CONDITION_ASSIGNMENT_CONFIG.urlConditionParam) ?? "",
+    urlParticipantId: searchParams.get(CONDITION_ASSIGNMENT_CONFIG.urlParticipantParam) ?? "",
+  };
+
+  window.conditionAssignmentDebug = debugPayload;
+  console.info("[experiment] condition assignment", debugPayload);
+  console.table([
+    {
+      dataPipeConditionIndex: debugPayload.conditionIndex,
+      appConditionId: debugPayload.conditionId,
+      assignmentSource: debugPayload.source,
+      participantId: debugPayload.participantId,
+    },
+  ]);
+}
+
 const searchParams = new URLSearchParams(window.location.search);
 const previewMode = searchParams.get("preview");
 const testMode = isTestMode(searchParams);
@@ -290,6 +319,13 @@ const state = {
 };
 
 window.experimentState = state;
+publishConditionAssignmentDebug({
+  conditionAssignment,
+  searchParams,
+  previewMode,
+  testMode,
+  saveMode,
+});
 
 const jsPsych = initJsPsych({
   on_finish: () => {
