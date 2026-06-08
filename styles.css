@@ -248,6 +248,14 @@ label,
   font-size: 17px;
 }
 
+.consent-validation-message {
+  min-height: 1.5em;
+  margin: 16px 0 0;
+  color: #b42318;
+  font-size: 15px;
+  font-weight: 700;
+}
+
 input[type="text"],
 input[type="date"],
 textarea {

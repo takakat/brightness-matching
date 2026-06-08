@@ -43,18 +43,40 @@ export function createConsentTrial() {
     .join("");
 
   function isConsentComplete() {
+    return getConsentMissingItems().length === 0;
+  }
+
+  function getConsentMissingItems() {
+    const missingItems = [];
     const hasValidAge =
       consentState.age.trim().length > 0 &&
       Number.isFinite(Number(consentState.age)) &&
-      Number(consentState.age) >= 0;
+      Number(consentState.age) >= 0 &&
+      Number(consentState.age) <= 120;
 
-    return (
-      consentState.agreedItems.every(Boolean) &&
-      consentState.date.trim().length > 0 &&
-      consentState.gender.trim().length > 0 &&
-      hasValidAge &&
-      consentState.signature.trim().length > 0
-    );
+    if (!consentState.agreedItems.every(Boolean)) {
+      missingItems.push("確認チェック");
+    }
+
+    if (consentState.date.trim().length === 0) {
+      missingItems.push("同意日");
+    }
+
+    if (consentState.age.trim().length === 0) {
+      missingItems.push("年齢");
+    } else if (!hasValidAge) {
+      missingItems.push("有効な年齢");
+    }
+
+    if (consentState.gender.trim().length === 0) {
+      missingItems.push("性別");
+    }
+
+    if (consentState.signature.trim().length === 0) {
+      missingItems.push("署名");
+    }
+
+    return missingItems;
   }
 
   function updateButtonState() {
@@ -63,7 +85,16 @@ export function createConsentTrial() {
       return;
     }
 
-    button.disabled = !isConsentComplete();
+    const missingItems = getConsentMissingItems();
+    const message = document.getElementById("consent-validation-message");
+
+    button.disabled = missingItems.length > 0;
+    button.setAttribute("aria-disabled", String(button.disabled));
+
+    if (message) {
+      message.textContent =
+        missingItems.length > 0 ? `未入力または未確認の項目があります: ${missingItems.join("、")}` : "";
+    }
   }
 
   return {
@@ -93,7 +124,7 @@ export function createConsentTrial() {
           <div class="consent-field-row consent-field-row-single">
             <label class="consent-inline-field">
               <span>${CONSENT_TEXT.dateLabel}:</span>
-              <input id="consent-date-input" type="date" value="${consentState.date}">
+              <input id="consent-date-input" type="date" value="${consentState.date}" required>
             </label>
           </div>
           <div class="consent-field-row">
@@ -103,7 +134,7 @@ export function createConsentTrial() {
             </label>
             <label class="consent-inline-field">
               <span>性別:</span>
-              <select id="consent-gender-input">
+              <select id="consent-gender-input" required>
                 <option value="">選択してください</option>
                 <option value="female"${consentState.gender === "female" ? " selected" : ""}>女性</option>
                 <option value="male"${consentState.gender === "male" ? " selected" : ""}>男性</option>
@@ -139,6 +170,17 @@ export function createConsentTrial() {
       const ageInput = document.getElementById("consent-age-input");
       const signatureInput = document.getElementById("consent-signature-input");
 
+      [dateInput, genderInput, ageInput, signatureInput].forEach((input) => {
+        input.required = true;
+      });
+
+      const validationMessage = document.createElement("p");
+      validationMessage.id = "consent-validation-message";
+      validationMessage.className = "consent-validation-message";
+      validationMessage.setAttribute("role", "status");
+      validationMessage.setAttribute("aria-live", "polite");
+      signatureInput.closest(".consent-field-row")?.after(validationMessage);
+
       dateInput.addEventListener("change", (event) => {
         consentState.date = event.target.value;
         updateButtonState();
@@ -158,6 +200,19 @@ export function createConsentTrial() {
         consentState.signature = event.target.value;
         updateButtonState();
       });
+
+      document.addEventListener(
+        "click",
+        (event) => {
+          const button = event.target.closest?.("#jspsych-html-button-response-button-0");
+          if (button && !isConsentComplete()) {
+            event.preventDefault();
+            event.stopPropagation();
+            updateButtonState();
+          }
+        },
+        true
+      );
 
       updateButtonState();
     },
