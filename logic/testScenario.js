@@ -1,3 +1,8 @@
+import {
+  ATTENTION_CHECK_EXPECTED_VALUE,
+  ATTENTION_CHECK_ITEM,
+} from "../config/scales.js";
+
 const DEFAULT_TEST_SCENARIO_ID = "flat_mid";
 const TEST_SCENARIO_IDS = [
   DEFAULT_TEST_SCENARIO_ID,
@@ -39,6 +44,7 @@ function buildBaseResponse({ evaluationSum, brightnessSum }) {
   const response = {
     ...distributeSum(evaluationSum, EVALUATION_KEYS),
     ...distributeSum(brightnessSum, BRIGHTNESS_KEYS),
+    [ATTENTION_CHECK_ITEM.name]: ATTENTION_CHECK_EXPECTED_VALUE,
   };
 
   for (const key of ACTIVITY_KEYS) {

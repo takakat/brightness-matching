@@ -7,6 +7,7 @@ import {
 } from "../config/conditions.js?v=20260526-datapipe-conditions";
 
 function normalizeConditionId(value) {
+  // URL で条件を指定された場合でも、定義済み ID だけを有効にします。
   if (!value) {
     return null;
   }
@@ -28,6 +29,7 @@ export function getOrCreateParticipantId({
   storage = globalThis.localStorage,
   persist = true,
 } = {}) {
+  // URL 指定、保存済み ID、新規生成の順で参加者 ID を決めます。
   const params = searchParams ?? new URLSearchParams(globalThis.location?.search ?? "");
   const requestedParticipantId = params.get(CONDITION_ASSIGNMENT_CONFIG.urlParticipantParam)?.trim();
   const storedParticipantId = storage.getItem(CONDITION_ASSIGNMENT_CONFIG.currentParticipantStorageKey);
@@ -45,6 +47,7 @@ export function buildManualConditionAssignment({
   searchParams,
   fallbackConditionId = DEFAULT_CONDITION_ID,
 } = {}) {
+  // プレビューや DataPipe 無効時は、URL 指定またはデフォルト条件で割り当てます。
   const params = searchParams ?? new URLSearchParams(globalThis.location?.search ?? "");
   const requestedConditionId = normalizeConditionId(params.get(CONDITION_ASSIGNMENT_CONFIG.urlConditionParam));
   const conditionId = requestedConditionId || fallbackConditionId;
@@ -63,6 +66,7 @@ export async function assignParticipantConditionWithDataPipe({
   endpoint,
   fetchImpl = globalThis.fetch,
 } = {}) {
+  // 本番時は DataPipe から条件番号を取得し、アプリ内の条件定義へ変換します。
   if (!experimentId || experimentId === "SET_YOUR_DATAPIPE_EXPERIMENT_ID") {
     throw new Error("DataPipe の experimentId が未設定です。config/experiment.js を更新してください。");
   }

@@ -1,4 +1,5 @@
 function renderValidationErrors(state) {
+  // 保存前検証に失敗した場合だけ、終了画面に理由を表示します。
   const errors = state.dataPipeSave?.validationErrors ?? [];
   if (errors.length === 0) {
     return "";
@@ -15,6 +16,7 @@ function renderValidationErrors(state) {
 }
 
 function getFinishCopy(state) {
+  // 保存状態に応じて、完了表示か未完了表示かを切り替えます。
   if (state.dataPipeSave?.status === "error") {
     return {
       eyebrow: "未完了",
@@ -40,7 +42,7 @@ function renderCompletionCode(state) {
     return "";
   }
 
-  const showCode = state.dataPipeSave?.status === "saved" || state.dataPipeSave?.status === "downloaded";
+  const showCode = ["saved", "downloaded", "saved_and_downloaded"].includes(state.dataPipeSave?.status);
   if (!showCode) {
     return "";
   }
@@ -55,6 +57,7 @@ function renderCompletionCode(state) {
 }
 
 export function createFinishTrial({ state }) {
+  // 最後の画面はキー入力を受け付けず、完了コードや保存エラーを確認させます。
   const { jsPsychHtmlKeyboardResponse } = window;
 
   return {

@@ -29,6 +29,7 @@ function shuffleArray(items, random = Math.random) {
 }
 
 function buildDirectionList() {
+  // 1 作品あたりの暗い開始・明るい開始の試行数を設定から展開します。
   const { directionsPerArtwork } = EXPERIMENT_CONFIG.matching;
   const directions = [];
 
@@ -58,6 +59,7 @@ function initializeMatchingPhaseState(state, phase) {
 }
 
 function createMatchingHtml({ stimulus }) {
+  // jsPsych の HTML trial として、左に作品、右に調整対象の灰色パッチを配置します。
   const matchingConfig = EXPERIMENT_CONFIG.matching;
   const stageStyle = [
     `--matching-shell-width: ${matchingConfig.shellWidthPx}px`,
@@ -105,6 +107,7 @@ function createMatchingHtml({ stimulus }) {
 }
 
 export function buildMatchingTrialsForArtwork({ random = Math.random } = {}) {
+  // 各作品の開始方向をシャッフルし、開始輝度を範囲内から選びます。
   const directions = shuffleArray(buildDirectionList(), random);
 
   return directions.map((startDirection, index) => ({
@@ -115,6 +118,7 @@ export function buildMatchingTrialsForArtwork({ random = Math.random } = {}) {
 }
 
 export function getMatchingStimuli(state) {
+  // マッチング対象はターゲット 1 枚と統制刺激群です。
   const stimuli = [];
 
   if (state.targetStimulus) {
@@ -139,6 +143,7 @@ export function buildMatchingPlan({
   stimuli = getMatchingStimuli(state),
   random = Math.random,
 }) {
+  // state に保持しやすいよう、全作品分のマッチング試行を一次元の配列にします。
   return {
     trials: stimuli.flatMap(({ stimulus, stimulusRole }) =>
       buildMatchingTrialsForArtwork({ random }).map((trialDefinition) => ({
@@ -162,6 +167,7 @@ export function createMatchingTrial({
   startDirection,
   initialValue,
 }) {
+  // 1 試行ぶんの明るさマッチングを作り、最終値と調整回数を data に保存します。
   const { jsPsychHtmlButtonResponse } = window;
   const matchingState = {
     value: null,
@@ -278,6 +284,7 @@ export function createMatchingTrial({
 }
 
 export function createMatchingLoop({ state, phase }) {
+  // jsPsych の loop_function で、matchingPlan の index を進めながら全試行を実行します。
   const matchingTrial = createMatchingTrial({
     state,
     phase,

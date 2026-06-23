@@ -1,6 +1,7 @@
 import { CONSENT_TEXT } from "../config/experiment.js";
 
 export function createConsentTrial() {
+  // 同意文書、確認チェック、属性入力を 1 つの jsPsych trial として表示します。
   const { jsPsychHtmlKeyboardResponse } = window;
   const isTestMode = new URLSearchParams(window.location.search).get("test") === "true";
   const consentState = {
@@ -47,6 +48,7 @@ export function createConsentTrial() {
   }
 
   function getConsentMissingItems() {
+    // 必須入力がそろうまで開始ボタンを無効にするため、未完了項目を列挙します。
     const missingItems = [];
     const hasValidAge =
       consentState.age.trim().length > 0 &&
@@ -227,6 +229,7 @@ export function createConsentTrial() {
       updateButtonState();
     },
     on_finish: (data) => {
+      // 同意完了の状態と属性情報を、後続の保存・分析用データに残します。
       data.phase = "consent";
       data.consent_date = consentState.date;
       data.consent_gender = consentState.gender;

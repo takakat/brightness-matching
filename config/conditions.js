@@ -1,15 +1,18 @@
+// URL パラメータや localStorage で使う、条件割当まわりのキー名です。
 const CONDITION_ASSIGNMENT_CONFIG = {
   currentParticipantStorageKey: "online-experiment-current-participant-id",
   urlConditionParam: "condition",
   urlParticipantParam: "participant_id",
 };
 
+// DataPipe が返す条件番号 0,1,2 を、アプリ内の条件 ID に対応させる順序です。
 const CONDITION_ORDER = [
   "counter_attitudinal",
   "objective_description_control",
   "irrelevant_control",
 ];
 
+// 各条件の表示名、ライティング課題文、どの刺激に書かせるかをまとめます。
 const EXPERIMENT_CONDITIONS = {
   counter_attitudinal: {
     id: "counter_attitudinal",
@@ -50,6 +53,7 @@ const CONDITION_IDS = [...CONDITION_ORDER];
 const DEFAULT_CONDITION_ID = CONDITION_IDS[0];
 
 function getConditionById(conditionId) {
+  // 不明な条件 ID が来た場合は、安全側としてデフォルト条件に戻します。
   if (conditionId && EXPERIMENT_CONDITIONS[conditionId]) {
     return EXPERIMENT_CONDITIONS[conditionId];
   }
@@ -58,6 +62,7 @@ function getConditionById(conditionId) {
 }
 
 function getConditionByIndex(conditionIndex) {
+  // DataPipe は条件を数値インデックスで返すため、ここで条件 ID に変換します。
   const normalizedIndex = Number(conditionIndex);
   if (!Number.isInteger(normalizedIndex) || normalizedIndex < 0 || normalizedIndex >= CONDITION_ORDER.length) {
     return getConditionById(DEFAULT_CONDITION_ID);

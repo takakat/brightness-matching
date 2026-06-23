@@ -1,4 +1,5 @@
 function createBipolarLabels(leftText, rightText) {
+  // jsPsych の Likert 尺度で、0 と 10 の端点に意味ラベルを付けます。
   const labelStyle = "font-size: 0.8em; font-weight: 500; display: block; margin-top: 4px;";
   return [
     `0<br><span style="${labelStyle}">${leftText}</span>`,
@@ -15,6 +16,11 @@ function createBipolarLabels(leftText, rightText) {
   ];
 }
 
+function createNumericLabels() {
+  return Array.from({ length: 11 }, (_, index) => String(index));
+}
+
+// SD 法の項目定義です。factor は表示モードや分析時の平均スコア算出に使います。
 const SD_ITEM_BANK = [
   { name: "good", factor: "evaluation", prompt: "悪い - 良い", labels: createBipolarLabels("悪い", "良い") },
   { name: "beauty", factor: "evaluation", prompt: "醜い - 美しい", labels: createBipolarLabels("醜い", "美しい") },
@@ -34,12 +40,22 @@ const SD_ITEM_BANK = [
   { name: "soft", factor: "softness", prompt: "固い - 柔らかな", labels: createBipolarLabels("固い", "柔らかな") },
 ];
 
+const ATTENTION_CHECK_EXPECTED_VALUE = 10;
+const ATTENTION_CHECK_ITEM = {
+  name: "attention_check",
+  prompt: "この項目では右端の「10」を選択してください。",
+  labels: createNumericLabels(),
+  required: true,
+};
+
 const SD_DISPLAY_MODES = {
+  // minimal は確認用、full は本番想定の全因子表示です。
   minimal: ["evaluation", "brightness"],
   full: ["evaluation", "activity", "brightness", "softness"],
 };
 
 const EVALUATION_KEYS = SD_ITEM_BANK
+  // evaluation 因子の平均は、ターゲット刺激の選定スコアになります。
   .filter((item) => item.factor === "evaluation")
   .map((item) => item.name);
 
@@ -79,7 +95,19 @@ function shuffleArray(items, random) {
   return shuffled;
 }
 
+export function getAttentionCheckIndex({ participantId, phase, itemCount } = {}) {
+  const normalizedItemCount = Number(itemCount);
+  if (!Number.isInteger(normalizedItemCount) || normalizedItemCount <= 0) {
+    return -1;
+  }
+
+  const seed = createSeedFromString(`${participantId ?? "default-participant"}:${phase ?? "sd"}:attention_check`);
+  const random = createSeededRandom(seed);
+  return Math.floor(random() * normalizedItemCount);
+}
+
 export function getSdQuestions(mode = "minimal", { participantId } = {}) {
+  // 参加者 ID で項目順を固定シャッフルし、順序効果を抑えつつ再現性を保ちます。
   const visibleFactors = SD_DISPLAY_MODES[mode] ?? SD_DISPLAY_MODES.minimal;
   const questions = SD_ITEM_BANK
     .filter((item) => visibleFactors.includes(item.factor))
@@ -89,4 +117,11 @@ export function getSdQuestions(mode = "minimal", { participantId } = {}) {
   return shuffleArray(questions, seededRandom);
 }
 
-export { BRIGHTNESS_KEYS, EVALUATION_KEYS, SD_DISPLAY_MODES, SD_ITEM_BANK };
+export {
+  ATTENTION_CHECK_EXPECTED_VALUE,
+  ATTENTION_CHECK_ITEM,
+  BRIGHTNESS_KEYS,
+  EVALUATION_KEYS,
+  SD_DISPLAY_MODES,
+  SD_ITEM_BANK,
+};

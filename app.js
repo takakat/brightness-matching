@@ -25,6 +25,7 @@ const SAVE_MODES = {
 };
 
 function createCompletionCode(length = 10) {
+  // クラウドワークス等で参加完了を照合するための短いコードを発行します。
   const characters = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const randomValues = new Uint32Array(length);
 
@@ -43,15 +44,16 @@ function renderAssignmentError(message) {
   document.body.innerHTML = `
     <div class="jspsych-display-element">
       <div class="instruction-card">
-        <h1>隴夲ｽ｡闔会ｽｶ陷托ｽｲ郢ｧ髮・ｽｽ阮吮ｻ郢ｧ蟶晏ｹ戊沂荵昴堤ｸｺ髦ｪ竏ｪ邵ｺ蟶呻ｽ鍋ｸｺ・ｧ邵ｺ蜉ｱ笳・/h1>
+        <h1>条件割り当てに失敗しました</h1>
         <p class="lead">${message}</p>
-        <p>DataPipe 邵ｺ・ｮ髫ｪ・ｭ陞ｳ螢ｹﾂ竏壹Ο郢昴・繝ｨ郢晢ｽｯ郢晢ｽｼ郢ｧ・ｯ隰暦ｽ･驍ｯ螢ｹﾂ窶・periment ID 郢ｧ蝣､・｢・ｺ髫ｱ髦ｪ・邵ｺ・ｦ邵ｺ荳岩味邵ｺ霈費ｼ樒ｸｲ繝ｻ/p>
+        <p>DataPipe の設定、ネットワーク接続、experiment ID が正しいかを確認してください。</p>
       </div>
     </div>
   `;
 }
 
 async function resolveConditionAssignment({ searchParams, previewMode, testMode }) {
+  // プレビューやテスト指定では手動割当、本番では DataPipe 割当を優先します。
   const participantId = getOrCreateParticipantId({
     searchParams,
     persist: !previewMode,
@@ -96,6 +98,7 @@ function buildDataPipeFilename(experimentState) {
 }
 
 function resolveSaveMode({ searchParams, previewMode }) {
+  // プレビューでは保存せず、URL 指定があればローカル CSV ダウンロードに切り替えます。
   if (previewMode) {
     return null;
   }
@@ -110,6 +113,7 @@ function resolveSaveMode({ searchParams, previewMode }) {
 }
 
 function buildDataSavePayload({ jsPsych, experimentState }) {
+  // 保存前に jsPsych 生データを要約・検証し、分析用 CSV に整形します。
   const rows = jsPsych.data.get().values();
   const filename = buildDataPipeFilename(experimentState);
   const summary = summarizeExperimentRows(rows, experimentState);
@@ -160,6 +164,7 @@ function downloadExperimentData({ filename, csvData }) {
 }
 
 async function saveExperimentData({ jsPsych, experimentState }) {
+  // 実験完了時に、検証済みデータを DataPipe 送信またはローカル保存します。
   const { dataPipe } = EXPERIMENT_CONFIG;
 
   if (experimentState.previewMode) {
@@ -315,6 +320,7 @@ try {
 }
 
 const activeStimuli = shuffleStimuliForParticipant(
+  // 参加者ごとの固定順序で刺激を提示します。
   getEnabledStimuli(EXPERIMENT_CONFIG.prototypeStimulusCount),
   conditionAssignment.participantId
 );
@@ -324,6 +330,7 @@ const sdQuestions = getSdQuestions(EXPERIMENT_CONFIG.sdDisplayMode, {
 });
 
 const state = {
+  // jsPsych trial 間で共有する実験状態です。選定結果や保存結果もここに集約します。
   subjectId: conditionAssignment.participantId,
   participantId: conditionAssignment.participantId,
   completionCode: createCompletionCode(),
@@ -445,6 +452,7 @@ function resetMatchingState(experimentState) {
 }
 
 function assignSelectionState(experimentState, selection) {
+  // pre-SD 後の選定結果を state に反映し、前後マッチングの試行計画を作ります。
   experimentState.preResults = selection.ranked;
   experimentState.highestRatedStimulus = selection.ranked[selection.ranked.length - 1] ?? null;
   experimentState.targetStimulus = selection.target;
@@ -482,6 +490,7 @@ function applyPreviewState(experimentState) {
 }
 
 function createDataSaveTrial() {
+  // jsPsych のタイムライン上で非同期保存を実行するための call-function trial です。
   return {
     type: jsPsychCallFunction,
     async: true,
@@ -525,6 +534,7 @@ function createDataSaveTrial() {
 }
 
 function createNormalTimeline() {
+  // 本番フロー: 同意、事前 SD、選定、マッチング、ライティング、保存、終了の順に実行します。
   return [
     {
       type: jsPsychPreload,
@@ -536,11 +546,13 @@ function createNormalTimeline() {
       stimuli: activeStimuli,
       questions: sdQuestions,
       evaluationKeys: EVALUATION_KEYS,
+      participantId: state.participantId,
     }),
     {
       type: jsPsychCallFunction,
       func: () => {
         const preResults = jsPsych.data
+          // 事前 SD の回答行から、選定ロジックに必要な刺激情報と評価スコアを取り出します。
           .get()
           .filter({ phase: "pre_sd" })
           .values()
@@ -590,6 +602,7 @@ function createNormalTimeline() {
 }
 
 function createPreviewTimeline(mode) {
+  // 画面単体確認用の短いタイムラインです。保存は行わず、選定状態はダミーで作ります。
   applyPreviewState(state);
   state.dataPipeSave = {
     status: "skipped",
@@ -623,6 +636,7 @@ function createPreviewTimeline(mode) {
         stimuli: [previewStimulus],
         questions: sdQuestions,
         evaluationKeys: EVALUATION_KEYS,
+        participantId: state.participantId,
       }),
     ];
   }

@@ -1,3 +1,5 @@
+// 実験で使用する元画像名の対応表です。
+// 実際に画面へ出すファイル名は下の manifest で stimulus_001.jpg 形式にそろえています。
 const SOURCE_FILENAMES = [
   "painting_01.jpg",
   "painting_02.jpg",
@@ -35,6 +37,7 @@ const STIMULI_MANIFEST = SOURCE_FILENAMES.map((sourceFilename, index) => {
 });
 
 export function getEnabledStimuli(limit = STIMULI_MANIFEST.length) {
+  // enabled が true の刺激だけを、定義された表示順で取り出します。
   return STIMULI_MANIFEST
     .filter((stimulus) => stimulus.enabled)
     .sort((left, right) => left.displayOrder - right.displayOrder)
@@ -42,10 +45,12 @@ export function getEnabledStimuli(limit = STIMULI_MANIFEST.length) {
 }
 
 export function getPreloadImages(limit = STIMULI_MANIFEST.length) {
+  // jsPsych の preload プラグインへ渡す画像パス一覧です。
   return getEnabledStimuli(limit).map((stimulus) => stimulus.imagePath);
 }
 
 function hashStringToSeed(value) {
+  // 参加者 ID から毎回同じ乱数シードを作り、参加者内では刺激順を再現可能にします。
   const normalizedValue = String(value ?? "default-participant");
   let hash = 2166136261;
 
@@ -72,6 +77,7 @@ function createSeededRandom(seedValue) {
 }
 
 export function shuffleStimuliForParticipant(stimuli, participantId) {
+  // 参加者ごとに異なるが、同じ参加者 ID なら再現できる順序にシャッフルします。
   const shuffledStimuli = [...stimuli];
   const random = createSeededRandom(hashStringToSeed(participantId));
 

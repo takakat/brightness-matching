@@ -55,6 +55,7 @@ function buildArtworkMeans(rows) {
 }
 
 function summarizeMatchingPhase(rows) {
+  // マッチング課題は件数だけでなく、開始方向と作品ごとの平均値も確認します。
   const artworkIds = new Set(rows.map((row) => row.stimulus_id).filter(Boolean));
 
   return {
@@ -67,6 +68,7 @@ function summarizeMatchingPhase(rows) {
 }
 
 function buildExpectedCounts(experimentState = {}) {
+  // 保存前検証で使う期待件数を、現在の実験設定から計算します。
   const expectedControlStimulusCount = EXPERIMENT_CONFIG.controlStimulusCount;
   const expectedMatchingArtworkCount = 1 + expectedControlStimulusCount;
   const expectedMatchingTrialCount =
@@ -83,6 +85,7 @@ function buildExpectedCounts(experimentState = {}) {
 }
 
 function buildValidationErrors(summary, experimentState = {}) {
+  // 主要フェーズの欠落があるデータは DataPipe へ送らないようにします。
   const errors = [];
   const writingTrialCount = summary.phaseCounts.writing ?? 0;
 
@@ -120,6 +123,7 @@ function buildValidationErrors(summary, experimentState = {}) {
 }
 
 export function summarizeExperimentRows(rows, experimentState = {}) {
+  // jsPsych の生データを保存前チェックと終了画面表示に使いやすい形へ要約します。
   const phaseCounts = rows.reduce((counts, row) => incrementPhaseCount(counts, row.phase), {});
   const writingRows = rows.filter((row) => row.phase === "writing");
   const writingRow = writingRows[0];

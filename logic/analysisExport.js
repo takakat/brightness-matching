@@ -14,11 +14,13 @@ const PHASE_ORDER = {
   post_sd: 6,
 };
 
+// 分析 CSV に含めるフェーズだけを対象にし、画面遷移用の内部行は除外します。
 const ANALYSIS_PHASES = new Set(Object.keys(PHASE_ORDER));
 const ACTIVITY_KEYS = SD_ITEM_BANK.filter((item) => item.factor === "activity").map((item) => item.name);
 const SOFTNESS_KEYS = SD_ITEM_BANK.filter((item) => item.factor === "softness").map((item) => item.name);
 
 export const ANALYSIS_CSV_COLUMNS = [
+  // 列順は分析側の読み込みに影響するため、ここで明示的に固定しています。
   "record_index",
   "phase",
   "phase_order",
@@ -57,6 +59,10 @@ export const ANALYSIS_CSV_COLUMNS = [
   "pre_sd_evaluation_score",
   "pre_sd_brightness_score",
   "sd_question_count",
+  "attention_check_present",
+  "attention_check_expected",
+  "attention_check_response",
+  "attention_check_passed",
   "sd_beauty",
   "sd_like",
   "sd_good",
@@ -194,6 +200,7 @@ function comparePreSdRows(left, right) {
 }
 
 function buildPreSdLookup(rows) {
+  // 事前 SD の評価結果を、後続フェーズの各行へ付与するための参照表にします。
   const preSdRows = rows
     .filter((row) => row.phase === "pre_sd" && row.stimulus_id)
     .map((row) => {
@@ -244,6 +251,7 @@ function resolveSelectedIds(rows, experimentState) {
 }
 
 function resolveMetaRows(rows, experimentState) {
+  // 参加者 ID、条件、選定済み刺激など、全行に共通するメタ情報を集約します。
   const firstRow = rows.find(Boolean) ?? {};
   const selectedIds = resolveSelectedIds(rows, experimentState);
 
@@ -353,6 +361,10 @@ function buildSdRecord(baseRecord, row) {
   return {
     ...baseRecord,
     sd_question_count: visibleSdItems.length || Object.keys(response).length,
+    attention_check_present: normalizeBoolean(row.attention_check_present) ?? false,
+    attention_check_expected: normalizeNumber(row.attention_check_expected),
+    attention_check_response: normalizeNumber(row.attention_check_response),
+    attention_check_passed: normalizeBoolean(row.attention_check_passed),
     ...buildSdValues(response),
     evaluation_score: normalizeNumber(row.evaluation_score) ?? meanFromKeys(response, EVALUATION_KEYS),
     brightness_score: meanFromKeys(response, BRIGHTNESS_KEYS),
@@ -399,6 +411,7 @@ function buildConsentRecord(baseRecord, row) {
 }
 
 export function buildAnalysisRows(rows, experimentState = {}) {
+  // フェーズごとの生データを、分析しやすい共通列のレコードへ変換します。
   const filteredRows = rows.filter((row) => ANALYSIS_PHASES.has(row.phase));
   const meta = resolveMetaRows(filteredRows, experimentState);
   const selectedControlIds = meta.controlIds ?? [];
@@ -465,6 +478,7 @@ function escapeCsvValue(value) {
 }
 
 export function buildAnalysisCsv(rows, experimentState = {}) {
+  // DataPipe 送信用・ローカル保存用の CSV 文字列を生成します。
   const analysisRows = buildAnalysisRows(rows, experimentState);
   const header = ANALYSIS_CSV_COLUMNS.join(",");
   const body = analysisRows

@@ -1,3 +1,4 @@
+// DataPipe 連携が未設定でもローカル確認できるようにする既定値です。
 const DEFAULT_DATAPIPE_CONFIG = {
   environmentName: "public",
   useConditionAssignment: false,
@@ -11,6 +12,7 @@ const DEFAULT_DATAPIPE_CONFIG = {
 
 const runtimeDataPipeConfig = globalThis.EXPERIMENT_RUNTIME?.dataPipe ?? {};
 
+// 実験全体の件数、文字数、マッチング課題、DataPipe 接続の基本設定です。
 const EXPERIMENT_CONFIG = {
   experimentTitle: "絵画の見えと評価に関するオンライン実験プロトタイプ",
   prototypeStimulusCount: 20,
@@ -54,6 +56,7 @@ const EXPERIMENT_CONFIG = {
 };
 
 const INTRO_CONTENT = {
+  // イントロ画面に表示する、この実験プロトタイプの流れと注意事項です。
   overviewPoints: [
     "同意画面の確認",
     "事前の SD 法による絵画評価",
@@ -71,6 +74,7 @@ const INTRO_CONTENT = {
 };
 
 const CONSENT_TEXT = {
+  // 同意画面の文面です。画面構造は pages/consent.js 側で組み立てます。
   title: "研究対象者への説明事項・参加同意",
   documentTitle: "芸術作品の見え方と印象形成に関する調査",
   metadataRows: [
@@ -136,6 +140,7 @@ const CONSENT_TEXT = {
 };
 
 const WRITING_CONTENT = {
+  // 現在は条件別の詳しい課題文を config/conditions.js 側で管理しています。
   title: "ライティング課題",
   promptTitle: "選ばれた作品について自由記述で回答してください",
   promptBody:

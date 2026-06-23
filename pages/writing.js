@@ -10,6 +10,7 @@ const WRITING_LAYOUT_WIDTH_PX = 760;
 const WRITING_TEXT_COLUMN_WIDTH_PX = 760;
 
 function applyWritingImageSize() {
+  // 画像の実寸比率に合わせて、ライティング画面の参照画像枠を調整します。
   const shell = document.querySelector(".writing-layout-shell");
   const image = document.querySelector(".writing-target");
   if (!shell || !image) {
@@ -55,6 +56,7 @@ function getHighestRatedStimulus(state) {
 }
 
 export function getWritingStimulus(state, condition = getAssignedCondition(state)) {
+  // 無関係統制群だけはターゲットではなく、最も高評価だった刺激を課題対象にします。
   if (condition.writingTask.stimulusRole === "non_target") {
     return getHighestRatedStimulus(state);
   }
@@ -67,6 +69,7 @@ function renderInstructionParagraphs(condition) {
 }
 
 export function createWritingTrial({ state }) {
+  // 条件ごとの指示文と対象刺激を表示し、最低文字数を満たすまで次へ進めない trial です。
   const { jsPsychSurveyText } = window;
   const searchParams = new URLSearchParams(window.location.search);
   const testMode = isTestMode(searchParams);
@@ -141,6 +144,7 @@ export function createWritingTrial({ state }) {
       updateCount();
     },
     on_finish: (data) => {
+      // 分析で条件と刺激を追跡できるよう、文章とメタ情報を jsPsych data に残します。
       const currentCondition = getAssignedCondition(state);
       const currentWritingStimulus = getWritingStimulus(state, currentCondition);
       const essay = data.response.essay ?? "";
