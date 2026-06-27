@@ -12,6 +12,24 @@ const DEFAULT_TIMEOUT_MS = Number(process.env.TEST_TIMEOUT_MS ?? 30000);
 const MATCHING_TIMEOUT_MS = Number(process.env.MATCHING_TIMEOUT_MS ?? 60000);
 const DOWNLOAD_TIMEOUT_MS = Number(process.env.DOWNLOAD_TIMEOUT_MS ?? 30000);
 const POLL_INTERVAL_MS = 250;
+const SAVE_MODE = process.env.TEST_SAVE_MODE ?? "download";
+const ASSIGNMENT_COVERAGE = process.env.TEST_ASSIGNMENT_COVERAGE ?? "matrix";
+const TEST_MAX_RUNS = Number(process.env.TEST_MAX_RUNS ?? 9);
+const TEST_PARTICIPANT_PREFIX = process.env.TEST_PARTICIPANT_PREFIX ?? "test";
+const SCREENSHOTS_ENABLED = process.env.SCREENSHOTS === "true";
+const KNOWN_CONDITION_IDS = [
+  "counter_attitudinal",
+  "objective_description_control",
+  "irrelevant_control",
+];
+const RESULTS_TIMESTAMP = new Date().toISOString().replace(/[:.]/g, "-");
+
+const liveResultDirectory = path.resolve("test-results", `live-production-${RESULTS_TIMESTAMP}`);
+const defaultDownloadDirectory =
+  SAVE_MODE === "datapipe" || SCREENSHOTS_ENABLED
+    ? liveResultDirectory
+    : path.resolve("test-results");
+const screenshotDirectory = path.join(liveResultDirectory, "screenshots");
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -46,6 +64,13 @@ function buildStimulusRange(start, end) {
   return ids;
 }
 
+function buildControlStimulusIds(startSequenceNumber) {
+  return Array.from(
+    { length: EXPERIMENT_CONFIG.controlStimulusCount },
+    (_, index) => buildStimulusId(startSequenceNumber + index)
+  );
+}
+
 function buildExpectedCounts() {
   const enabledStimuli = getEnabledStimuli(EXPERIMENT_CONFIG.prototypeStimulusCount);
   const preSd = enabledStimuli.length;
@@ -67,7 +92,7 @@ const TEST_MATRIX = [
     scenarioId: "strict_ascending",
     expectedSelection: {
       targetId: buildStimulusId(20),
-      controlIds: [buildStimulusId(19), buildStimulusId(18), buildStimulusId(17)],
+      controlIds: buildControlStimulusIds(16).reverse(),
       postSdIds: buildStimulusRange(20, 11),
       writingStimulusId: buildStimulusId(20),
       writingTaskStimulusRole: "target",
@@ -79,7 +104,7 @@ const TEST_MATRIX = [
     scenarioId: "tie_blocks",
     expectedSelection: {
       targetId: buildStimulusId(1),
-      controlIds: [buildStimulusId(2), buildStimulusId(3), buildStimulusId(4)],
+      controlIds: buildControlStimulusIds(2),
       postSdIds: buildStimulusRange(1, 10),
       writingStimulusId: buildStimulusId(1),
       writingTaskStimulusRole: "target",
@@ -91,7 +116,7 @@ const TEST_MATRIX = [
     scenarioId: "flat_mid",
     expectedSelection: {
       targetId: buildStimulusId(1),
-      controlIds: [buildStimulusId(2), buildStimulusId(3), buildStimulusId(4)],
+      controlIds: buildControlStimulusIds(2),
       postSdIds: buildStimulusRange(1, 10),
       writingStimulusId: buildStimulusId(20),
       writingTaskStimulusRole: "non_target",
@@ -100,7 +125,42 @@ const TEST_MATRIX = [
   },
 ];
 
+function getDefaultExpectedSelection(conditionId, scenarioId = "flat_mid") {
+  const knownDefinition = TEST_MATRIX.find(
+    (definition) =>
+      definition.conditionId === conditionId && definition.scenarioId === scenarioId
+  );
+
+  if (knownDefinition) {
+    return knownDefinition.expectedSelection;
+  }
+
+  const writingIsIrrelevantControl = conditionId === "irrelevant_control";
+  return {
+    targetId: buildStimulusId(1),
+    controlIds: buildControlStimulusIds(2),
+    postSdIds: buildStimulusRange(1, 10),
+    writingStimulusId: writingIsIrrelevantControl ? buildStimulusId(20) : buildStimulusId(1),
+    writingTaskStimulusRole: writingIsIrrelevantControl ? "non_target" : "target",
+    writingAnalysisRole: writingIsIrrelevantControl ? "prototype_only" : "target",
+  };
+}
+
+function buildScenarioDefinition({ conditionId, scenarioId = "flat_mid", participantId = null } = {}) {
+  const resolvedConditionId = conditionId ?? "pending_assignment";
+  return {
+    conditionId: resolvedConditionId,
+    scenarioId,
+    participantId,
+    expectedSelection: getDefaultExpectedSelection(resolvedConditionId, scenarioId),
+  };
+}
+
 function resolveScenarioDefinitions() {
+  if (ASSIGNMENT_COVERAGE === "all_conditions") {
+    return [];
+  }
+
   if (!process.env.TEST_SCENARIO && !process.env.TEST_CONDITION) {
     return TEST_MATRIX;
   }
@@ -127,16 +187,55 @@ function resolveScenarioDefinitions() {
 }
 
 function formatScenario(definition) {
-  return `${definition.conditionId} / ${definition.scenarioId}`;
+  const participantSuffix = definition.participantId ? ` / ${definition.participantId}` : "";
+  return `${definition.conditionId} / ${definition.scenarioId}${participantSuffix}`;
 }
 
 function buildScenarioUrl(definition) {
   const url = new URL(BASE_URL);
   url.searchParams.set("test", "true");
-  url.searchParams.set("save", "download");
-  url.searchParams.set("condition", definition.conditionId);
+  if (SAVE_MODE === "download") {
+    url.searchParams.set("save", "download");
+  }
+  if (definition.conditionId && definition.conditionId !== "pending_assignment") {
+    url.searchParams.set("condition", definition.conditionId);
+  }
+  if (definition.participantId) {
+    url.searchParams.set("participant_id", definition.participantId);
+  }
   url.searchParams.set("testScenario", definition.scenarioId);
   return url.toString();
+}
+
+function formatRunNumber(runNumber) {
+  return String(runNumber).padStart(3, "0");
+}
+
+function buildParticipantId(runNumber) {
+  return `${TEST_PARTICIPANT_PREFIX}-${formatRunNumber(runNumber)}`;
+}
+
+function sanitizePathPart(value) {
+  return String(value ?? "unknown")
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100) || "unknown";
+}
+
+async function captureStep(page, definition, stepName) {
+  if (!SCREENSHOTS_ENABLED) {
+    return null;
+  }
+
+  await fs.mkdir(screenshotDirectory, { recursive: true });
+  const participant = sanitizePathPart(definition.participantId ?? "no-participant");
+  const scenario = sanitizePathPart(`${definition.conditionId}-${definition.scenarioId}`);
+  const step = sanitizePathPart(stepName);
+  const screenshotPath = path.join(screenshotDirectory, `${participant}-${scenario}-${step}.png`);
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+  logInfo(`screenshot: ${screenshotPath}`);
+  return screenshotPath;
 }
 
 async function configureDownloads(browser, page, downloadDirectory) {
@@ -155,6 +254,33 @@ async function configureDownloads(browser, page, downloadDirectory) {
     behavior: "allow",
     downloadPath: downloadDirectory,
   });
+}
+
+async function verifyRuntimeConfigForDataPipe() {
+  if (SAVE_MODE !== "datapipe") {
+    return;
+  }
+
+  const runtimeConfigUrl = new URL("runtime-config.js", BASE_URL).toString();
+  logStep("Runtime DataPipe config check");
+  logInfo(`runtime config: ${runtimeConfigUrl}`);
+
+  const response = await fetch(runtimeConfigUrl);
+  assertCondition(response.ok, `Unable to fetch runtime-config.js: ${response.status}`);
+
+  const runtimeConfigText = await response.text();
+  const requiredSnippets = [
+    'environmentName: "production"',
+    "useConditionAssignment: true",
+    "saveData: true",
+  ];
+
+  for (const snippet of requiredSnippets) {
+    assertCondition(
+      runtimeConfigText.includes(snippet),
+      `runtime-config.js did not include required setting: ${snippet}`
+    );
+  }
 }
 
 async function installJsPsychCapture(page) {
@@ -210,6 +336,10 @@ async function getSelectionDebug(page) {
   return page.evaluate(() => window.selectionDebug ?? null);
 }
 
+async function getConditionAssignmentDebug(page) {
+  return page.evaluate(() => window.conditionAssignmentDebug ?? null);
+}
+
 async function waitForPhaseCount(page, phaseName, minimumCount, timeoutMs) {
   await page.waitForFunction(
     (phase, targetCount) => {
@@ -259,6 +389,12 @@ async function clickEnabledButton(
 
 async function runIntro(page, scenarioLabel) {
   logStep(`${scenarioLabel}: Intro`);
+  const consentAlreadyVisible = await page.$("[data-consent-index]");
+  if (consentAlreadyVisible) {
+    logInfo(`${scenarioLabel}: consent is already visible; skipping intro click`);
+    return;
+  }
+
   await clickEnabledButton(page, "button");
   await page.waitForSelector("[data-consent-index]", { timeout: DEFAULT_TIMEOUT_MS });
 }
@@ -456,6 +592,7 @@ async function collectFinalResult(page) {
     return {
       dataPipeSaveResult: window.dataPipeSaveResult ?? null,
       dataPipeUploadSummary: window.dataPipeUploadSummary ?? null,
+      conditionAssignmentDebug: window.conditionAssignmentDebug ?? null,
       experimentState: window.experimentState ?? null,
       selectionDebug: window.selectionDebug ?? null,
       phaseCounts,
@@ -534,6 +671,17 @@ function buildPhaseCountsFromCsv(records) {
   }, {});
 }
 
+function buildExpectedAnalysisRowCount(expectedCounts) {
+  return (
+    1 +
+    expectedCounts.preSd +
+    expectedCounts.preMatching +
+    expectedCounts.writing +
+    expectedCounts.postMatching +
+    expectedCounts.postSd
+  );
+}
+
 function assertSelection(selectionDebug, expectedSelection) {
   assert.deepEqual(
     selectionDebug?.target?.id,
@@ -559,15 +707,23 @@ function assertFinalResult({
   downloadedFilePath,
   csvRecords,
 }) {
-  const scenarioLabel = formatScenario(definition);
+  const observedConditionId =
+    result.conditionAssignmentDebug?.conditionId ?? result.experimentState?.assignedCondition?.id;
+  const resolvedDefinition = buildScenarioDefinition({
+    conditionId: observedConditionId ?? definition.conditionId,
+    scenarioId: definition.scenarioId,
+    participantId: definition.participantId,
+  });
+  const scenarioLabel = formatScenario(resolvedDefinition);
   const saveResult = result.dataPipeSaveResult;
   const uploadSummary = result.dataPipeUploadSummary;
   const phaseCounts = result.phaseCounts ?? {};
   const writingRows = result.rows.filter((row) => row.phase === "writing");
   const completionCode = result.experimentState?.completionCode;
+  const expectedSaveStatus = SAVE_MODE === "datapipe" ? "saved_and_downloaded" : "downloaded";
 
   assertCondition(saveResult, `${scenarioLabel}: dataPipeSaveResult was not available.`);
-  assert.equal(saveResult.status, "downloaded");
+  assert.equal(saveResult.status, expectedSaveStatus);
   assertCondition(uploadSummary, `${scenarioLabel}: dataPipeUploadSummary was not available.`);
   assert.deepEqual(uploadSummary.validationErrors ?? [], []);
   assertCondition(
@@ -586,10 +742,14 @@ function assertFinalResult({
   assertCondition(Boolean(downloadedFilePath), `${scenarioLabel}: downloaded CSV file path was missing.`);
   assert.equal(path.basename(downloadedFilePath), saveResult.filename);
 
-  assertSelection(result.selectionDebug, definition.expectedSelection);
+  assertSelection(result.selectionDebug, resolvedDefinition.expectedSelection);
 
   const csvPhaseCounts = buildPhaseCountsFromCsv(csvRecords);
-  assert.equal(csvRecords.length, 64, `${scenarioLabel}: unexpected analysis CSV row count.`);
+  assert.equal(
+    csvRecords.length,
+    buildExpectedAnalysisRowCount(expectedCounts),
+    `${scenarioLabel}: unexpected analysis CSV row count.`
+  );
   assert.equal(csvPhaseCounts.consent, 1);
   assert.equal(csvPhaseCounts.pre_sd, expectedCounts.preSd);
   assert.equal(csvPhaseCounts.pre_matching, expectedCounts.preMatching);
@@ -600,43 +760,50 @@ function assertFinalResult({
   const firstCsvRecord = csvRecords[0];
   assert.equal(firstCsvRecord.completion_code, completionCode);
   assert.equal(firstCsvRecord.prototype_stimulus_count, String(EXPERIMENT_CONFIG.prototypeStimulusCount));
-  assert.equal(firstCsvRecord.condition_id, definition.conditionId);
-  assert.equal(firstCsvRecord.selected_target_stimulus_id, definition.expectedSelection.targetId);
+  assert.equal(firstCsvRecord.condition_id, resolvedDefinition.conditionId);
+  assert.equal(firstCsvRecord.participant_id, resolvedDefinition.participantId ?? firstCsvRecord.participant_id);
+  assert.equal(firstCsvRecord.selected_target_stimulus_id, resolvedDefinition.expectedSelection.targetId);
   assert.equal(
     firstCsvRecord.selected_control_stimulus_ids,
-    definition.expectedSelection.controlIds.join("|")
+    resolvedDefinition.expectedSelection.controlIds.join("|")
   );
   assert.equal(
     firstCsvRecord.selected_post_sd_stimulus_ids,
-    definition.expectedSelection.postSdIds.join("|")
+    resolvedDefinition.expectedSelection.postSdIds.join("|")
   );
-  assert.equal(firstCsvRecord.selected_control_stimulus_count, "3");
+  assert.equal(
+    firstCsvRecord.selected_control_stimulus_count,
+    String(EXPERIMENT_CONFIG.controlStimulusCount)
+  );
   assert.equal(firstCsvRecord.selected_post_sd_stimulus_count, "10");
 
   const writingRow = csvRecords.find((row) => row.phase === "writing");
   assertCondition(writingRow, `${scenarioLabel}: writing row missing from CSV.`);
   assert.equal(writingRow.completion_code, completionCode);
-  assert.equal(writingRow.stimulus_id, definition.expectedSelection.writingStimulusId);
+  assert.equal(writingRow.stimulus_id, resolvedDefinition.expectedSelection.writingStimulusId);
   assert.equal(
     writingRow.writing_task_stimulus_role,
-    definition.expectedSelection.writingTaskStimulusRole
+    resolvedDefinition.expectedSelection.writingTaskStimulusRole
   );
-  assert.equal(writingRow.stimulus_analysis_role, definition.expectedSelection.writingAnalysisRole);
+  assert.equal(writingRow.stimulus_analysis_role, resolvedDefinition.expectedSelection.writingAnalysisRole);
   assertCondition(Boolean(String(writingRow.essay ?? "").trim()), `${scenarioLabel}: CSV essay was empty.`);
 
   const preSdRows = csvRecords.filter((row) => row.phase === "pre_sd");
   const targetPreSdRow = preSdRows.find(
-    (row) => row.stimulus_id === definition.expectedSelection.targetId
+    (row) => row.stimulus_id === resolvedDefinition.expectedSelection.targetId
   );
   assertCondition(targetPreSdRow, `${scenarioLabel}: target pre-SD row was missing.`);
   assert.equal(targetPreSdRow.pre_sd_rank, "1");
+
+  return resolvedDefinition;
 }
 
 async function runTestScenario(definition) {
   const expectedCounts = buildExpectedCounts();
-  const scenarioLabel = formatScenario(definition);
+  let activeDefinition = definition;
+  let scenarioLabel = formatScenario(activeDefinition);
   const scenarioUrl = buildScenarioUrl(definition);
-  const downloadDirectory = path.resolve("test-results");
+  const downloadDirectory = defaultDownloadDirectory;
 
   logStep(`Scenario setup: ${scenarioLabel}`);
   logInfo(`url: ${scenarioUrl}`);
@@ -676,14 +843,34 @@ async function runTestScenario(definition) {
     });
 
     await waitForJsPsychReady(page);
+    const conditionAssignmentDebug = await getConditionAssignmentDebug(page);
+    if (definition.conditionId === "pending_assignment") {
+      assertCondition(
+        KNOWN_CONDITION_IDS.includes(conditionAssignmentDebug?.conditionId),
+        `Unexpected assigned condition: ${conditionAssignmentDebug?.conditionId ?? "none"}`
+      );
+      activeDefinition = buildScenarioDefinition({
+        conditionId: conditionAssignmentDebug.conditionId,
+        scenarioId: definition.scenarioId,
+        participantId: definition.participantId,
+      });
+      scenarioLabel = formatScenario(activeDefinition);
+      logInfo(
+        `${definition.participantId}: assigned ${conditionAssignmentDebug.conditionId} via ${conditionAssignmentDebug.source}`
+      );
+    }
+
     await runIntro(page, scenarioLabel);
     await runConsent(page, scenarioLabel);
+    await captureStep(page, activeDefinition, "consent-after-submit");
+    await captureStep(page, activeDefinition, "pre-sd-start");
     await runSdLoop(page, "pre_sd", expectedCounts.preSd, scenarioLabel);
     await page.waitForSelector(".matching-shell", { timeout: DEFAULT_TIMEOUT_MS });
+    await captureStep(page, activeDefinition, "pre-matching-start");
 
     const selectionDebug = await getSelectionDebug(page);
     assertCondition(selectionDebug, `${scenarioLabel}: selectionDebug was not published after pre_sd.`);
-    assertSelection(selectionDebug, definition.expectedSelection);
+    assertSelection(selectionDebug, activeDefinition.expectedSelection);
 
     await waitForMatchingToComplete(
       page,
@@ -692,7 +879,9 @@ async function runTestScenario(definition) {
       "textarea",
       scenarioLabel
     );
+    await captureStep(page, activeDefinition, "writing");
     await runWriting(page, scenarioLabel);
+    await captureStep(page, activeDefinition, "post-matching-start");
     await waitForMatchingToComplete(
       page,
       "post_matching",
@@ -700,8 +889,10 @@ async function runTestScenario(definition) {
       "input[type='radio']",
       scenarioLabel
     );
+    await captureStep(page, activeDefinition, "post-sd-start");
     await runSdLoop(page, "post_sd", expectedCounts.postSd, scenarioLabel);
     await waitForDataSaveResult(page, scenarioLabel);
+    await captureStep(page, activeDefinition, "finish");
 
     const finalResult = await collectFinalResult(page);
     const downloadedFilePath = await waitForDownloadFile(
@@ -711,8 +902,8 @@ async function runTestScenario(definition) {
     );
     const csvRecords = await readCsvRecords(downloadedFilePath);
 
-    assertFinalResult({
-      definition,
+    const resolvedDefinition = assertFinalResult({
+      definition: activeDefinition,
       result: finalResult,
       expectedCounts,
       downloadedFilePath,
@@ -724,9 +915,14 @@ async function runTestScenario(definition) {
       JSON.stringify(
         {
           scenario: scenarioLabel,
-          selectedTarget: definition.expectedSelection.targetId,
-          selectedControls: definition.expectedSelection.controlIds,
-          selectedPostSd: definition.expectedSelection.postSdIds,
+          participantId: resolvedDefinition.participantId,
+          conditionId: resolvedDefinition.conditionId,
+          saveStatus: finalResult.dataPipeSaveResult?.status,
+          dataPipeFilename: finalResult.dataPipeSaveResult?.filename,
+          completionCode: finalResult.experimentState?.completionCode,
+          selectedTarget: resolvedDefinition.expectedSelection.targetId,
+          selectedControls: resolvedDefinition.expectedSelection.controlIds,
+          selectedPostSd: resolvedDefinition.expectedSelection.postSdIds,
           downloadedFile: downloadedFilePath,
           observedCounts: finalResult.phaseCounts,
         },
@@ -734,6 +930,17 @@ async function runTestScenario(definition) {
         2
       )
     );
+
+    return {
+      participantId: resolvedDefinition.participantId,
+      conditionId: resolvedDefinition.conditionId,
+      scenarioId: resolvedDefinition.scenarioId,
+      saveStatus: finalResult.dataPipeSaveResult?.status,
+      dataPipeFilename: finalResult.dataPipeSaveResult?.filename,
+      completionCode: finalResult.experimentState?.completionCode,
+      downloadedFile: downloadedFilePath,
+      phaseCounts: finalResult.phaseCounts,
+    };
   } finally {
     if (browser) {
       await browser.close();
@@ -745,6 +952,76 @@ async function main() {
   const definitions = resolveScenarioDefinitions();
   logStep("Test matrix");
   logInfo(`base url: ${BASE_URL}`);
+  logInfo(`save mode: ${SAVE_MODE}`);
+  logInfo(`assignment coverage: ${ASSIGNMENT_COVERAGE}`);
+  logInfo(`screenshots: ${SCREENSHOTS_ENABLED}`);
+  await verifyRuntimeConfigForDataPipe();
+
+  if (ASSIGNMENT_COVERAGE === "all_conditions") {
+    const observedConditions = new Set();
+    const runSummaries = [];
+
+    await fs.mkdir(liveResultDirectory, { recursive: true });
+
+    for (let runNumber = 1; runNumber <= TEST_MAX_RUNS; runNumber += 1) {
+      const participantId = buildParticipantId(runNumber);
+      const definition = buildScenarioDefinition({
+        conditionId: "pending_assignment",
+        scenarioId: process.env.TEST_SCENARIO ?? "flat_mid",
+        participantId,
+      });
+
+      const runSummary = await runTestScenario(definition);
+      runSummaries.push({
+        runNumber,
+        ...runSummary,
+      });
+      observedConditions.add(runSummary.conditionId);
+
+      const missingConditions = KNOWN_CONDITION_IDS.filter(
+        (conditionId) => !observedConditions.has(conditionId)
+      );
+      logInfo(
+        `observed conditions: ${Array.from(observedConditions).join(", ")}; missing: ${
+          missingConditions.join(", ") || "none"
+        }`
+      );
+
+      if (missingConditions.length === 0) {
+        break;
+      }
+    }
+
+    const missingConditions = KNOWN_CONDITION_IDS.filter(
+      (conditionId) => !observedConditions.has(conditionId)
+    );
+    const summaryPath = path.join(liveResultDirectory, "summary.json");
+    const summary = {
+      baseUrl: BASE_URL,
+      saveMode: SAVE_MODE,
+      assignmentCoverage: ASSIGNMENT_COVERAGE,
+      maxRuns: TEST_MAX_RUNS,
+      participantPrefix: TEST_PARTICIPANT_PREFIX,
+      screenshotDirectory: SCREENSHOTS_ENABLED ? screenshotDirectory : null,
+      observedConditions: Array.from(observedConditions),
+      missingConditions,
+      runs: runSummaries,
+    };
+
+    await fs.writeFile(summaryPath, `${JSON.stringify(summary, null, 2)}\n`, "utf8");
+    logStep("Assignment coverage summary");
+    console.log(JSON.stringify(summary, null, 2));
+    logInfo(`summary: ${summaryPath}`);
+
+    if (missingConditions.length > 0) {
+      logInfo(
+        `Reached TEST_MAX_RUNS=${TEST_MAX_RUNS} before observing all conditions. Missing: ${missingConditions.join(", ")}`
+      );
+    }
+
+    return;
+  }
+
   logInfo(`scenario count: ${definitions.length}`);
 
   for (const definition of definitions) {

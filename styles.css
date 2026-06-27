@@ -411,6 +411,21 @@ textarea {
   border: none;
 }
 
+.matching-key-list {
+  display: inline-grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 1.2em;
+  text-align: left;
+}
+
+.matching-next-note {
+  margin: 8px 0 0;
+  text-align: center;
+  color: var(--muted-color);
+  font-size: 15px;
+}
+
 .matching-readouts {
   display: grid;
   gap: 4px;

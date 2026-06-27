@@ -93,13 +93,14 @@ function createMatchingHtml({ stimulus }) {
             <div class="matching-controls">
               <div class="key-hint">
                 <p style="margin: 0 0 8px;"><strong>操作方法</strong></p>
-                <ul class="compact-list">
+                <ul class="matching-key-list">
                   <li>A キー / 左矢印キー: 1段階暗くする</li>
                   <li>D キー / 右矢印キー: 1段階明るくする</li>
                 </ul>
               </div>
             </div>
           </div>
+          <p class="matching-next-note">調整が完了したら、次へ進んでください。</p>
         </div>
       </div>
     </div>
