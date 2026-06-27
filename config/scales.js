@@ -41,6 +41,10 @@ const SD_ITEM_BANK = [
 ];
 
 const ATTENTION_CHECK_EXPECTED_VALUE = 10;
+const ATTENTION_CHECK_COUNTS_BY_PHASE = {
+  pre_sd: 3,
+  post_sd: 2,
+};
 const ATTENTION_CHECK_ITEM = {
   name: "attention_check",
   prompt: "この項目では右端の「10」を選択してください。",
@@ -106,6 +110,35 @@ export function getAttentionCheckIndex({ participantId, phase, itemCount } = {})
   return Math.floor(random() * normalizedItemCount);
 }
 
+export function getAttentionCheckIndices({ participantId, phase, itemCount, checkCount } = {}) {
+  const normalizedItemCount = Number(itemCount);
+  if (!Number.isInteger(normalizedItemCount) || normalizedItemCount <= 0) {
+    return [];
+  }
+
+  const requestedCheckCount = checkCount ?? ATTENTION_CHECK_COUNTS_BY_PHASE[phase] ?? 1;
+  const normalizedCheckCount = Math.min(
+    normalizedItemCount,
+    Math.max(0, Number(requestedCheckCount) || 0)
+  );
+
+  if (normalizedCheckCount === 0) {
+    return [];
+  }
+
+  const firstIndex = getAttentionCheckIndex({ participantId, phase, itemCount });
+  const remainingIndices = Array.from({ length: normalizedItemCount }, (_, index) => index)
+    .filter((index) => index !== firstIndex);
+  const random = createSeededRandom(
+    createSeedFromString(`${participantId ?? "default-participant"}:${phase ?? "sd"}:attention_check_extra`)
+  );
+
+  return [
+    firstIndex,
+    ...shuffleArray(remainingIndices, random).slice(0, normalizedCheckCount - 1),
+  ];
+}
+
 export function getSdQuestions(mode = "minimal", { participantId } = {}) {
   // 参加者 ID で項目順を固定シャッフルし、順序効果を抑えつつ再現性を保ちます。
   const visibleFactors = SD_DISPLAY_MODES[mode] ?? SD_DISPLAY_MODES.minimal;
@@ -118,6 +151,7 @@ export function getSdQuestions(mode = "minimal", { participantId } = {}) {
 }
 
 export {
+  ATTENTION_CHECK_COUNTS_BY_PHASE,
   ATTENTION_CHECK_EXPECTED_VALUE,
   ATTENTION_CHECK_ITEM,
   BRIGHTNESS_KEYS,

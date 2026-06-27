@@ -54,6 +54,8 @@ const rows = [
     attention_check_expected: 10,
     attention_check_response: 10,
     attention_check_passed: true,
+    attention_check_index: 1,
+    attention_check_total_for_phase: 3,
     response: {
       good: 1,
       beauty: 0,
@@ -92,6 +94,7 @@ const rows = [
     display_order: 19,
     evaluation_score: 1.5,
     attention_check_present: false,
+    attention_check_total_for_phase: 3,
     response: {
       good: 2,
       beauty: 1,
@@ -195,6 +198,8 @@ const rows = [
     attention_check_expected: 10,
     attention_check_response: 0,
     attention_check_passed: false,
+    attention_check_index: 1,
+    attention_check_total_for_phase: 2,
     response: {
       good: 1,
       beauty: 1,
@@ -247,7 +252,14 @@ assert.equal(analysisRows[1].attention_check_present, true);
 assert.equal(analysisRows[1].attention_check_expected, 10);
 assert.equal(analysisRows[1].attention_check_response, 10);
 assert.equal(analysisRows[1].attention_check_passed, true);
+assert.equal(analysisRows[1].attention_check_index, 1);
+assert.equal(analysisRows[1].attention_check_total_for_phase, 3);
+assert.equal(analysisRows[1].attention_check_phase_total, 3);
+assert.equal(analysisRows[1].attention_check_phase_passed_count, 1);
+assert.equal(analysisRows[1].attention_check_phase_failed_count, 2);
+assert.equal(analysisRows[1].attention_check_phase_all_passed, false);
 assert.equal(analysisRows[2].attention_check_present, false);
+assert.equal(analysisRows[2].attention_check_phase_total, 3);
 assert.equal(analysisRows[3].matching_delta_from_initial, 82);
 assert.equal(analysisRows[4].writing_task_stimulus_role, "target");
 assert.equal(analysisRows[5].stimulus_analysis_role, "control");
@@ -255,6 +267,10 @@ assert.equal(analysisRows[5].matching_delta_from_initial, -65);
 assert.equal(analysisRows[6].is_post_sd_stimulus, true);
 assert.equal(analysisRows[6].attention_check_present, true);
 assert.equal(analysisRows[6].attention_check_passed, false);
+assert.equal(analysisRows[6].attention_check_phase_total, 2);
+assert.equal(analysisRows[6].attention_check_phase_passed_count, 0);
+assert.equal(analysisRows[6].attention_check_phase_failed_count, 2);
+assert.equal(analysisRows[6].attention_check_phase_all_passed, false);
 assert.equal(analysisRows[0].prototype_stimulus_count, 20);
 assert.equal(analysisRows[0].completion_code, "ABCD2345XY");
 assert.equal(analysisRows[0].trial_type, "html-button-response");
@@ -268,6 +284,7 @@ assert.equal(header, ANALYSIS_CSV_COLUMNS.join(","));
 assert.ok(header.includes("trial_type"));
 assert.ok(header.includes("completion_code"));
 assert.ok(header.includes("attention_check_passed"));
+assert.ok(header.includes("attention_check_phase_all_passed"));
 assert.ok(header.includes("consent_gender"));
 assert.ok(header.includes("consent_age"));
 assert.ok(firstDataRow.includes("consent"));

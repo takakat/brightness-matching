@@ -63,6 +63,12 @@ export const ANALYSIS_CSV_COLUMNS = [
   "attention_check_expected",
   "attention_check_response",
   "attention_check_passed",
+  "attention_check_index",
+  "attention_check_total_for_phase",
+  "attention_check_phase_total",
+  "attention_check_phase_passed_count",
+  "attention_check_phase_failed_count",
+  "attention_check_phase_all_passed",
   "sd_beauty",
   "sd_like",
   "sd_good",
@@ -177,6 +183,57 @@ function buildSdValues(response) {
   }
 
   return values;
+}
+
+function buildAttentionCheckPhaseLookup(rows) {
+  const summaries = new Map();
+
+  for (const row of rows) {
+    if (row.phase !== "pre_sd" && row.phase !== "post_sd") {
+      continue;
+    }
+
+    const existingSummary = summaries.get(row.phase) ?? {
+      declaredTotal: null,
+      presentCount: 0,
+      passedCount: 0,
+    };
+    const declaredTotal = normalizeNumber(row.attention_check_total_for_phase);
+
+    if (declaredTotal !== null) {
+      existingSummary.declaredTotal = Math.max(
+        existingSummary.declaredTotal ?? 0,
+        declaredTotal
+      );
+    }
+
+    if (normalizeBoolean(row.attention_check_present) === true) {
+      existingSummary.presentCount += 1;
+
+      if (normalizeBoolean(row.attention_check_passed) === true) {
+        existingSummary.passedCount += 1;
+      }
+    }
+
+    summaries.set(row.phase, existingSummary);
+  }
+
+  return new Map(
+    Array.from(summaries.entries()).map(([phase, summary]) => {
+      const total = summary.declaredTotal ?? summary.presentCount;
+      const passedCount = summary.passedCount;
+
+      return [
+        phase,
+        {
+          total,
+          passedCount,
+          failedCount: Math.max(0, total - passedCount),
+          allPassed: total > 0 ? passedCount === total : null,
+        },
+      ];
+    })
+  );
 }
 
 function comparePreSdRows(left, right) {
@@ -354,9 +411,15 @@ function buildBaseRecord({
   };
 }
 
-function buildSdRecord(baseRecord, row) {
+function buildSdRecord(baseRecord, row, attentionCheckPhaseLookup) {
   const response = row.response ?? {};
   const visibleSdItems = getVisibleSdItemNames(baseRecord.sd_display_mode);
+  const attentionCheckPhaseSummary = attentionCheckPhaseLookup.get(row.phase) ?? {
+    total: null,
+    passedCount: null,
+    failedCount: null,
+    allPassed: null,
+  };
 
   return {
     ...baseRecord,
@@ -365,6 +428,12 @@ function buildSdRecord(baseRecord, row) {
     attention_check_expected: normalizeNumber(row.attention_check_expected),
     attention_check_response: normalizeNumber(row.attention_check_response),
     attention_check_passed: normalizeBoolean(row.attention_check_passed),
+    attention_check_index: normalizeNumber(row.attention_check_index),
+    attention_check_total_for_phase: normalizeNumber(row.attention_check_total_for_phase),
+    attention_check_phase_total: attentionCheckPhaseSummary.total,
+    attention_check_phase_passed_count: attentionCheckPhaseSummary.passedCount,
+    attention_check_phase_failed_count: attentionCheckPhaseSummary.failedCount,
+    attention_check_phase_all_passed: attentionCheckPhaseSummary.allPassed,
     ...buildSdValues(response),
     evaluation_score: normalizeNumber(row.evaluation_score) ?? meanFromKeys(response, EVALUATION_KEYS),
     brightness_score: meanFromKeys(response, BRIGHTNESS_KEYS),
@@ -419,6 +488,7 @@ export function buildAnalysisRows(rows, experimentState = {}) {
   const controlIdSet = new Set(selectedControlIds);
   const postSdIdSet = new Set(selectedPostSdIds);
   const preSdLookup = buildPreSdLookup(filteredRows);
+  const attentionCheckPhaseLookup = buildAttentionCheckPhaseLookup(filteredRows);
   const phaseCounts = {};
 
   return filteredRows.map((row, index) => {
@@ -437,7 +507,7 @@ export function buildAnalysisRows(rows, experimentState = {}) {
     });
 
     if (row.phase === "pre_sd" || row.phase === "post_sd") {
-      return buildSdRecord(baseRecord, row);
+      return buildSdRecord(baseRecord, row, attentionCheckPhaseLookup);
     }
 
     if (row.phase === "pre_matching" || row.phase === "post_matching") {

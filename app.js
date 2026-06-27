@@ -1,13 +1,13 @@
 import { EXPERIMENT_CONFIG } from "./config/experiment.js?v=20260528-flow-validation";
 import { CONDITION_ASSIGNMENT_CONFIG } from "./config/conditions.js?v=20260526-datapipe-conditions";
 import { getPreloadImages, getEnabledStimuli, shuffleStimuliForParticipant } from "./config/stimuli.js";
-import { EVALUATION_KEYS, getSdQuestions } from "./config/scales.js?v=20260605-sd16";
+import { EVALUATION_KEYS, getSdQuestions } from "./config/scales.js?v=20260627-attention-checks";
 import {
   assignParticipantConditionWithDataPipe,
   buildManualConditionAssignment,
   getOrCreateParticipantId,
 } from "./logic/conditionAssignment.js?v=20260526-datapipe-conditions";
-import { buildAnalysisCsv } from "./logic/analysisExport.js?v=20260528-analysis-csv";
+import { buildAnalysisCsv } from "./logic/analysisExport.js?v=20260627-attention-checks";
 import { summarizeExperimentRows } from "./logic/dataSummary.js?v=20260528-flow-validation";
 import { selectStimuli } from "./logic/selection.js";
 import { getTestScenarioId, isTestMode } from "./logic/testScenario.js";
@@ -15,7 +15,7 @@ import { createConsentTrial } from "./pages/consent.js?v=20260608-consent-guard"
 import { createFinishTrial } from "./pages/finish.js?v=20260605-finish-ja";
 import { createIntroTrial } from "./pages/intro.js?v=20260528-production-mode";
 import { buildMatchingPlan, createMatchingLoop } from "./pages/matching.js?v=20260604-matching-copy";
-import { createPreSdTimeline, createPostSdLoop } from "./pages/sdScale.js?v=20260526-datapipe-conditions";
+import { createPreSdTimeline, createPostSdLoop } from "./pages/sdScale.js?v=20260627-attention-checks";
 import { createWritingTrial } from "./pages/writing.js?v=20260605-writing-inline";
 
 const { initJsPsych, jsPsychPreload, jsPsychCallFunction } = window;

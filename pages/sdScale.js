@@ -1,7 +1,7 @@
 import {
   ATTENTION_CHECK_EXPECTED_VALUE,
   ATTENTION_CHECK_ITEM,
-  getAttentionCheckIndex,
+  getAttentionCheckIndices,
 } from "../config/scales.js";
 import { computeAverageScore } from "../logic/selection.js";
 import {
@@ -48,8 +48,11 @@ function getTrialQuestions(questions, hasAttentionCheck) {
   return hasAttentionCheck ? [...questions, ATTENTION_CHECK_ITEM] : questions;
 }
 
-function applyAttentionCheckData(data, response, hasAttentionCheck) {
+function applyAttentionCheckData(data, response, attentionCheckIndex, attentionCheckTotalForPhase) {
+  const hasAttentionCheck = attentionCheckIndex !== null;
   data.attention_check_present = hasAttentionCheck;
+  data.attention_check_index = attentionCheckIndex;
+  data.attention_check_total_for_phase = attentionCheckTotalForPhase;
 
   if (!hasAttentionCheck) {
     data.attention_check_expected = null;
@@ -76,14 +79,18 @@ export function createPreSdTimeline({
   const searchParams = new URLSearchParams(window.location.search);
   const testMode = isTestMode(searchParams);
   const testScenarioId = getTestScenarioId(searchParams);
-  const attentionCheckIndex = getAttentionCheckIndex({
+  const attentionCheckIndices = getAttentionCheckIndices({
     participantId,
     phase: "pre_sd",
     itemCount: stimuli.length,
   });
+  const attentionCheckIndexLookup = new Map(
+    attentionCheckIndices.map((index, checkIndex) => [index, checkIndex + 1])
+  );
 
   return stimuli.map((stimulus, zeroBasedIndex) => {
-    const hasAttentionCheck = zeroBasedIndex === attentionCheckIndex;
+    const attentionCheckIndex = attentionCheckIndexLookup.get(zeroBasedIndex) ?? null;
+    const hasAttentionCheck = attentionCheckIndex !== null;
     const trialQuestions = getTrialQuestions(questions, hasAttentionCheck);
 
     return {
@@ -115,7 +122,7 @@ export function createPreSdTimeline({
         data.display_order = stimulus.displayOrder;
         data.sd_mode = questions.length;
         data.evaluation_score = computeAverageScore(response, evaluationKeys);
-        applyAttentionCheckData(data, response, hasAttentionCheck);
+        applyAttentionCheckData(data, response, attentionCheckIndex, attentionCheckIndices.length);
       },
     };
   });
@@ -132,12 +139,18 @@ export function createPostSdLoop({
   const searchParams = new URLSearchParams(window.location.search);
   const testMode = isTestMode(searchParams);
   const testScenarioId = getTestScenarioId(searchParams);
-  function getPostAttentionCheckIndex() {
-    return getAttentionCheckIndex({
+  function getPostAttentionCheckIndices() {
+    return getAttentionCheckIndices({
       participantId: state.participantId,
       phase: "post_sd",
       itemCount: state.postSdStimuli.length,
     });
+  }
+
+  function getPostAttentionCheckIndex() {
+    const attentionCheckIndices = getPostAttentionCheckIndices();
+    const attentionCheckIndex = attentionCheckIndices.indexOf(state.postSdIndex);
+    return attentionCheckIndex >= 0 ? attentionCheckIndex + 1 : null;
   }
 
   const postSdTrial = {
@@ -148,7 +161,7 @@ export function createPostSdLoop({
       return renderSdPreamble(phaseLabel, stimulus, state.postSdIndex + 1, state.postSdStimuli.length);
     },
     questions: function () {
-      return getTrialQuestions(questions, state.postSdIndex === getPostAttentionCheckIndex());
+      return getTrialQuestions(questions, getPostAttentionCheckIndex() !== null);
     },
     scale_width: 880,
     button_label: "次へ",
@@ -156,7 +169,7 @@ export function createPostSdLoop({
       ? function () {
           setTimeout(() => {
             const stimulus = state.postSdStimuli[state.postSdIndex];
-            const trialQuestions = getTrialQuestions(questions, state.postSdIndex === getPostAttentionCheckIndex());
+            const trialQuestions = getTrialQuestions(questions, getPostAttentionCheckIndex() !== null);
             const response = buildTestSdResponse({
               scenarioId: testScenarioId,
               stimulus,
@@ -169,14 +182,15 @@ export function createPostSdLoop({
     on_finish: function (data) {
       const stimulus = state.postSdStimuli[state.postSdIndex];
       const response = data.response ?? {};
-      const hasAttentionCheck = state.postSdIndex === getPostAttentionCheckIndex();
+      const attentionCheckIndices = getPostAttentionCheckIndices();
+      const attentionCheckIndex = getPostAttentionCheckIndex();
       data.phase = "post_sd";
       data.stimulus_id = stimulus.id;
       data.stimulus_label = stimulus.label;
       data.image_path = stimulus.imagePath;
       data.display_order = stimulus.displayOrder;
       data.evaluation_score = computeAverageScore(response, evaluationKeys);
-      applyAttentionCheckData(data, response, hasAttentionCheck);
+      applyAttentionCheckData(data, response, attentionCheckIndex, attentionCheckIndices.length);
       data.is_target = state.targetStimulus?.id === stimulus.id;
       data.is_control = state.controlStimuli.some((candidate) => candidate.id === stimulus.id);
       state.postSdIndex += 1;
