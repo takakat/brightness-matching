@@ -56,6 +56,18 @@ function renderCompletionCode(state) {
   `;
 }
 
+function renderDebriefing() {
+  return `
+    <div class="mini-panel" style="margin-bottom: 18px;">
+      <h2>デブリーフィング</h2>
+      <p class="lead" style="margin-bottom: 8px;">
+        事前説明では「言語表現と思考プロセスの研究」とお伝えしましたが、実際には「自分の好みと異なる文章を書くことで、その対象への評価がどう変化するか（認知的不協和理論）」を調査する実験でした。<br>
+        正確な結果を得るため、意図的な隠蔽（カバーストーリーの使用）があったことをお詫び申し上げます。
+      </p>
+    </div>
+  `;
+}
+
 export function createFinishTrial({ state }) {
   // 最後の画面はキー入力を受け付けず、完了コードや保存エラーを確認させます。
   const { jsPsychHtmlKeyboardResponse } = window;
@@ -72,6 +84,7 @@ export function createFinishTrial({ state }) {
           <p class="lead">${finishCopy.lead}</p>
           ${renderCompletionCode(state)}
           ${renderValidationErrors(state)}
+          ${renderDebriefing()}
           <p class="summary-note">${finishCopy.note}</p>
         </div>
       `;
