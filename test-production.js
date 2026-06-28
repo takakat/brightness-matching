@@ -17,6 +17,9 @@ const ASSIGNMENT_COVERAGE = process.env.TEST_ASSIGNMENT_COVERAGE ?? "matrix";
 const TEST_MAX_RUNS = Number(process.env.TEST_MAX_RUNS ?? 9);
 const TEST_PARTICIPANT_PREFIX = process.env.TEST_PARTICIPANT_PREFIX ?? "test";
 const SCREENSHOTS_ENABLED = process.env.SCREENSHOTS === "true";
+const ATTENTION_MODE = process.env.TEST_ATTENTION_MODE ?? "pass";
+const MATCHING_INPUT_MODE = process.env.TEST_MATCHING_INPUT_MODE ?? "auto";
+const CLEAN_LIVE_RESULTS = process.env.TEST_CLEAN_LIVE_RESULTS !== "false";
 const KNOWN_CONDITION_IDS = [
   "counter_attitudinal",
   "objective_description_control",
@@ -30,6 +33,7 @@ const defaultDownloadDirectory =
     ? liveResultDirectory
     : path.resolve("test-results");
 const screenshotDirectory = path.join(liveResultDirectory, "screenshots");
+const csvEvidenceDirectory = path.join(liveResultDirectory, "csv");
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -71,6 +75,20 @@ function buildControlStimulusIds(startSequenceNumber) {
   );
 }
 
+function buildAscendingSelection(conditionId) {
+  const writingIsIrrelevantControl = conditionId === "irrelevant_control";
+  return {
+    targetId: buildStimulusId(20),
+    controlIds: buildControlStimulusIds(16).reverse(),
+    postSdIds: buildStimulusRange(20, 11),
+    writingStimulusId: writingIsIrrelevantControl ? buildStimulusId(1) : buildStimulusId(20),
+    writingTaskStimulusRole: writingIsIrrelevantControl ? "non_target" : "target",
+    writingAnalysisRole: writingIsIrrelevantControl ? "prototype_only" : "target",
+    targetPreSdRank: "1",
+    writingPreSdRank: writingIsIrrelevantControl ? "20" : "1",
+  };
+}
+
 function buildExpectedCounts() {
   const enabledStimuli = getEnabledStimuli(EXPERIMENT_CONFIG.prototypeStimulusCount);
   const preSd = enabledStimuli.length;
@@ -90,14 +108,7 @@ const TEST_MATRIX = [
   {
     conditionId: "counter_attitudinal",
     scenarioId: "strict_ascending",
-    expectedSelection: {
-      targetId: buildStimulusId(20),
-      controlIds: buildControlStimulusIds(16).reverse(),
-      postSdIds: buildStimulusRange(20, 11),
-      writingStimulusId: buildStimulusId(20),
-      writingTaskStimulusRole: "target",
-      writingAnalysisRole: "target",
-    },
+    expectedSelection: buildAscendingSelection("counter_attitudinal"),
   },
   {
     conditionId: "objective_description_control",
@@ -135,6 +146,10 @@ function getDefaultExpectedSelection(conditionId, scenarioId = "flat_mid") {
     return knownDefinition.expectedSelection;
   }
 
+  if (scenarioId === "strict_ascending") {
+    return buildAscendingSelection(conditionId);
+  }
+
   const writingIsIrrelevantControl = conditionId === "irrelevant_control";
   return {
     targetId: buildStimulusId(1),
@@ -146,12 +161,20 @@ function getDefaultExpectedSelection(conditionId, scenarioId = "flat_mid") {
   };
 }
 
-function buildScenarioDefinition({ conditionId, scenarioId = "flat_mid", participantId = null } = {}) {
+function buildScenarioDefinition({
+  conditionId,
+  scenarioId = "flat_mid",
+  participantId = null,
+  runNumber = null,
+  attentionMode = null,
+} = {}) {
   const resolvedConditionId = conditionId ?? "pending_assignment";
   return {
     conditionId: resolvedConditionId,
     scenarioId,
     participantId,
+    runNumber,
+    attentionMode: attentionMode ?? "pass",
     expectedSelection: getDefaultExpectedSelection(resolvedConditionId, scenarioId),
   };
 }
@@ -172,18 +195,12 @@ function resolveScenarioDefinitions() {
       definition.conditionId === conditionId && definition.scenarioId === scenarioId
   );
 
-  return [knownDefinition ?? {
-    conditionId,
-    scenarioId,
-    expectedSelection: {
-      targetId: buildStimulusId(1),
-      controlIds: [buildStimulusId(2), buildStimulusId(3), buildStimulusId(4)],
-      postSdIds: buildStimulusRange(1, 10),
-      writingStimulusId: buildStimulusId(1),
-      writingTaskStimulusRole: "target",
-      writingAnalysisRole: "target",
-    },
-  }];
+  return [
+    knownDefinition ?? buildScenarioDefinition({
+      conditionId,
+      scenarioId,
+    }),
+  ];
 }
 
 function formatScenario(definition) {
@@ -213,6 +230,14 @@ function formatRunNumber(runNumber) {
 
 function buildParticipantId(runNumber) {
   return `${TEST_PARTICIPANT_PREFIX}-${formatRunNumber(runNumber)}`;
+}
+
+function resolveAttentionModeForRun(runNumber) {
+  if (ATTENTION_MODE === "mixed") {
+    return runNumber % 2 === 0 ? "pass" : "fail";
+  }
+
+  return ATTENTION_MODE === "fail" ? "fail" : "pass";
 }
 
 function sanitizePathPart(value) {
@@ -280,6 +305,28 @@ async function verifyRuntimeConfigForDataPipe() {
       runtimeConfigText.includes(snippet),
       `runtime-config.js did not include required setting: ${snippet}`
     );
+  }
+}
+
+async function cleanPreviousLiveResults() {
+  if (!CLEAN_LIVE_RESULTS || (SAVE_MODE !== "datapipe" && !SCREENSHOTS_ENABLED)) {
+    return;
+  }
+
+  const resultsRoot = path.resolve("test-results");
+  const entries = await fs.readdir(resultsRoot, { withFileTypes: true }).catch(() => []);
+  const liveResultEntries = entries.filter(
+    (entry) => entry.isDirectory() && entry.name.startsWith("live-production-")
+  );
+
+  for (const entry of liveResultEntries) {
+    const targetPath = path.join(resultsRoot, entry.name);
+    if (path.resolve(targetPath) === path.resolve(liveResultDirectory)) {
+      continue;
+    }
+
+    await fs.rm(targetPath, { recursive: true, force: true });
+    logInfo(`removed old live result directory: ${targetPath}`);
   }
 }
 
@@ -430,10 +477,10 @@ async function runConsent(page, scenarioLabel) {
   await waitForVisibleRadioPage(page);
 }
 
-async function answerCurrentSdPage(page) {
+async function answerCurrentSdPage(page, attentionMode) {
   await sleep(150);
 
-  return page.evaluate(() => {
+  return page.evaluate((attentionMode) => {
     const radios = Array.from(document.querySelectorAll("input[type='radio']"));
     const groupedInputs = new Map();
 
@@ -442,6 +489,20 @@ async function answerCurrentSdPage(page) {
         groupedInputs.set(radio.name, []);
       }
       groupedInputs.get(radio.name).push(radio);
+    }
+
+    let attentionOverrideApplied = false;
+    if (attentionMode === "fail" && groupedInputs.size > 16) {
+      const lastInputGroup = Array.from(groupedInputs.values()).at(-1);
+      const selectedWrongInput =
+        lastInputGroup?.find((input) => input.value !== "10") ?? lastInputGroup?.[0];
+
+      if (selectedWrongInput) {
+        selectedWrongInput.checked = true;
+        selectedWrongInput.dispatchEvent(new Event("input", { bubbles: true }));
+        selectedWrongInput.dispatchEvent(new Event("change", { bubbles: true }));
+        attentionOverrideApplied = true;
+      }
     }
 
     let checkedGroupCount = 0;
@@ -454,18 +515,19 @@ async function answerCurrentSdPage(page) {
     return {
       groupCount: groupedInputs.size,
       checkedGroupCount,
+      attentionOverrideApplied,
     };
-  });
+  }, attentionMode);
 }
 
-async function runSdLoop(page, phaseName, expectedCount, scenarioLabel) {
+async function runSdLoop(page, phaseName, expectedCount, scenarioLabel, attentionMode = "pass") {
   logStep(`${scenarioLabel}: SD loop (${phaseName})`);
 
   let completedCount = await getPhaseCount(page, phaseName);
   while (completedCount < expectedCount) {
     await waitForVisibleRadioPage(page);
 
-    const sdState = await answerCurrentSdPage(page);
+    const sdState = await answerCurrentSdPage(page, attentionMode);
     assertCondition(sdState.groupCount > 0, `${phaseName} rendered no questions.`);
     assertCondition(
       sdState.groupCount === sdState.checkedGroupCount,
@@ -485,6 +547,13 @@ async function waitForMatchingToComplete(page, phaseName, expectedCount, nextSel
 
   let completedCount = await getPhaseCount(page, phaseName);
   while (completedCount < expectedCount) {
+    if (MATCHING_INPUT_MODE === "adjusted") {
+      await page.waitForSelector(".matching-shell", { timeout: DEFAULT_TIMEOUT_MS });
+      await page.keyboard.press("KeyD");
+      await page.keyboard.press("KeyD");
+      await page.keyboard.press("KeyA");
+    }
+
     await waitForPhaseCount(page, phaseName, completedCount + 1, MATCHING_TIMEOUT_MS);
     completedCount = await getPhaseCount(page, phaseName);
     logInfo(`${scenarioLabel}: ${phaseName} ${completedCount}/${expectedCount}`);
@@ -663,6 +732,17 @@ async function readCsvRecords(csvPath) {
   return parseCsv(csvText);
 }
 
+async function preserveCsvEvidence(csvPath) {
+  if (!csvPath || path.resolve(path.dirname(csvPath)) !== path.resolve(liveResultDirectory)) {
+    return csvPath;
+  }
+
+  await fs.mkdir(csvEvidenceDirectory, { recursive: true });
+  const evidencePath = path.join(csvEvidenceDirectory, path.basename(csvPath));
+  await fs.copyFile(csvPath, evidencePath);
+  return evidencePath;
+}
+
 function buildPhaseCountsFromCsv(records) {
   return records.reduce((counts, row) => {
     const phase = row.phase;
@@ -680,6 +760,79 @@ function buildExpectedAnalysisRowCount(expectedCounts) {
     expectedCounts.postMatching +
     expectedCounts.postSd
   );
+}
+
+function summarizeAttentionChecks(records) {
+  const attentionRows = records.filter((row) => row.attention_check_present === "true");
+  const failedRows = attentionRows.filter((row) => row.attention_check_passed !== "true");
+  const passedRows = attentionRows.filter((row) => row.attention_check_passed === "true");
+
+  return {
+    total: attentionRows.length,
+    passed: passedRows.length,
+    failed: failedRows.length,
+  };
+}
+
+function assertRequiredConsentFields(consentRow, scenarioLabel) {
+  assertCondition(consentRow, `${scenarioLabel}: consent row was missing.`);
+  for (const field of ["consent_signature", "consent_date", "consent_gender", "consent_age"]) {
+    assertCondition(
+      Boolean(String(consentRow[field] ?? "").trim()),
+      `${scenarioLabel}: ${field} was missing.`
+    );
+  }
+}
+
+function assertMatchingRows(records, expectedCounts, scenarioLabel) {
+  const matchingRows = records.filter(
+    (row) => row.phase === "pre_matching" || row.phase === "post_matching"
+  );
+  assert.equal(
+    matchingRows.length,
+    expectedCounts.preMatching + expectedCounts.postMatching,
+    `${scenarioLabel}: unexpected matching row count.`
+  );
+
+  for (const row of matchingRows) {
+    const initialValue = Number(row.matching_initial_value);
+    const matchingValue = Number(row.matching_value);
+    const deltaFromInitial = Number(row.matching_delta_from_initial);
+    const adjustmentCount = Number(row.matching_adjustment_count);
+
+    assertCondition(Number.isFinite(initialValue), `${scenarioLabel}: matching initial value was missing.`);
+    assertCondition(Number.isFinite(matchingValue), `${scenarioLabel}: matching value was missing.`);
+    assertCondition(Number.isFinite(deltaFromInitial), `${scenarioLabel}: matching delta was missing.`);
+    assertCondition(Number.isFinite(adjustmentCount), `${scenarioLabel}: matching adjustment count was missing.`);
+    assert.equal(
+      deltaFromInitial,
+      matchingValue - initialValue,
+      `${scenarioLabel}: matching delta did not equal final minus initial.`
+    );
+    assertCondition(adjustmentCount >= 0, `${scenarioLabel}: matching adjustment count was negative.`);
+
+    if (row.matching_start_direction === "dark_start") {
+      assertCondition(
+        initialValue >= EXPERIMENT_CONFIG.matching.startValueRanges.dark.min &&
+          initialValue <= EXPERIMENT_CONFIG.matching.startValueRanges.dark.max,
+        `${scenarioLabel}: dark-start initial value was outside the configured range.`
+      );
+    }
+
+    if (row.matching_start_direction === "bright_start") {
+      assertCondition(
+        initialValue >= EXPERIMENT_CONFIG.matching.startValueRanges.bright.min &&
+          initialValue <= EXPERIMENT_CONFIG.matching.startValueRanges.bright.max,
+        `${scenarioLabel}: bright-start initial value was outside the configured range.`
+      );
+    }
+
+    if (MATCHING_INPUT_MODE === "adjusted") {
+      assert.equal(adjustmentCount, 3, `${scenarioLabel}: matching adjustment count was not 3.`);
+      assert.equal(deltaFromInitial, 1, `${scenarioLabel}: matching adjusted delta was not +1.`);
+      assert.equal(matchingValue, initialValue + 1, `${scenarioLabel}: matching final value was not initial + 1.`);
+    }
+  }
 }
 
 function assertSelection(selectionDebug, expectedSelection) {
@@ -713,6 +866,8 @@ function assertFinalResult({
     conditionId: observedConditionId ?? definition.conditionId,
     scenarioId: definition.scenarioId,
     participantId: definition.participantId,
+    runNumber: definition.runNumber,
+    attentionMode: definition.attentionMode,
   });
   const scenarioLabel = formatScenario(resolvedDefinition);
   const saveResult = result.dataPipeSaveResult;
@@ -756,12 +911,18 @@ function assertFinalResult({
   assert.equal(csvPhaseCounts.writing, expectedCounts.writing);
   assert.equal(csvPhaseCounts.post_matching, expectedCounts.postMatching);
   assert.equal(csvPhaseCounts.post_sd, expectedCounts.postSd);
+  assertMatchingRows(csvRecords, expectedCounts, scenarioLabel);
 
   const firstCsvRecord = csvRecords[0];
+  const consentRow = csvRecords.find((row) => row.phase === "consent");
+  const attentionSummary = summarizeAttentionChecks(csvRecords);
   assert.equal(firstCsvRecord.completion_code, completionCode);
+  assertCondition(Boolean(String(firstCsvRecord.participant_id ?? "").trim()), `${scenarioLabel}: participant_id was missing.`);
+  assertCondition(Boolean(String(firstCsvRecord.condition_id ?? "").trim()), `${scenarioLabel}: condition_id was missing.`);
   assert.equal(firstCsvRecord.prototype_stimulus_count, String(EXPERIMENT_CONFIG.prototypeStimulusCount));
   assert.equal(firstCsvRecord.condition_id, resolvedDefinition.conditionId);
   assert.equal(firstCsvRecord.participant_id, resolvedDefinition.participantId ?? firstCsvRecord.participant_id);
+  assertRequiredConsentFields(consentRow, scenarioLabel);
   assert.equal(firstCsvRecord.selected_target_stimulus_id, resolvedDefinition.expectedSelection.targetId);
   assert.equal(
     firstCsvRecord.selected_control_stimulus_ids,
@@ -786,6 +947,13 @@ function assertFinalResult({
     resolvedDefinition.expectedSelection.writingTaskStimulusRole
   );
   assert.equal(writingRow.stimulus_analysis_role, resolvedDefinition.expectedSelection.writingAnalysisRole);
+  if (resolvedDefinition.expectedSelection.writingPreSdRank) {
+    assert.equal(
+      writingRow.pre_sd_rank,
+      resolvedDefinition.expectedSelection.writingPreSdRank,
+      `${scenarioLabel}: writing stimulus did not have the expected pre-SD rank.`
+    );
+  }
   assertCondition(Boolean(String(writingRow.essay ?? "").trim()), `${scenarioLabel}: CSV essay was empty.`);
 
   const preSdRows = csvRecords.filter((row) => row.phase === "pre_sd");
@@ -793,9 +961,31 @@ function assertFinalResult({
     (row) => row.stimulus_id === resolvedDefinition.expectedSelection.targetId
   );
   assertCondition(targetPreSdRow, `${scenarioLabel}: target pre-SD row was missing.`);
-  assert.equal(targetPreSdRow.pre_sd_rank, "1");
+  assert.equal(
+    targetPreSdRow.pre_sd_rank,
+    resolvedDefinition.expectedSelection.targetPreSdRank ?? "1"
+  );
 
-  return resolvedDefinition;
+  assertCondition(attentionSummary.total > 0, `${scenarioLabel}: no attention checks were recorded.`);
+  if (resolvedDefinition.attentionMode === "fail") {
+    assertCondition(
+      attentionSummary.failed > 0,
+      `${scenarioLabel}: expected at least one failed attention check.`
+    );
+  } else {
+    assert.equal(attentionSummary.failed, 0, `${scenarioLabel}: expected all attention checks to pass.`);
+  }
+
+  return {
+    resolvedDefinition,
+    attentionSummary,
+    consentSummary: {
+      signature: consentRow.consent_signature,
+      date: consentRow.consent_date,
+      gender: consentRow.consent_gender,
+      age: consentRow.consent_age,
+    },
+  };
 }
 
 async function runTestScenario(definition) {
@@ -853,18 +1043,21 @@ async function runTestScenario(definition) {
         conditionId: conditionAssignmentDebug.conditionId,
         scenarioId: definition.scenarioId,
         participantId: definition.participantId,
+        runNumber: definition.runNumber,
+        attentionMode: definition.attentionMode,
       });
       scenarioLabel = formatScenario(activeDefinition);
       logInfo(
         `${definition.participantId}: assigned ${conditionAssignmentDebug.conditionId} via ${conditionAssignmentDebug.source}`
       );
+      logInfo(`${definition.participantId}: attention mode ${activeDefinition.attentionMode}`);
     }
 
     await runIntro(page, scenarioLabel);
     await runConsent(page, scenarioLabel);
     await captureStep(page, activeDefinition, "consent-after-submit");
     await captureStep(page, activeDefinition, "pre-sd-start");
-    await runSdLoop(page, "pre_sd", expectedCounts.preSd, scenarioLabel);
+    await runSdLoop(page, "pre_sd", expectedCounts.preSd, scenarioLabel, activeDefinition.attentionMode);
     await page.waitForSelector(".matching-shell", { timeout: DEFAULT_TIMEOUT_MS });
     await captureStep(page, activeDefinition, "pre-matching-start");
 
@@ -890,7 +1083,7 @@ async function runTestScenario(definition) {
       scenarioLabel
     );
     await captureStep(page, activeDefinition, "post-sd-start");
-    await runSdLoop(page, "post_sd", expectedCounts.postSd, scenarioLabel);
+    await runSdLoop(page, "post_sd", expectedCounts.postSd, scenarioLabel, activeDefinition.attentionMode);
     await waitForDataSaveResult(page, scenarioLabel);
     await captureStep(page, activeDefinition, "finish");
 
@@ -901,14 +1094,16 @@ async function runTestScenario(definition) {
       finalResult.dataPipeSaveResult?.filename ?? null
     );
     const csvRecords = await readCsvRecords(downloadedFilePath);
+    const csvEvidencePath = await preserveCsvEvidence(downloadedFilePath);
 
-    const resolvedDefinition = assertFinalResult({
+    const finalAssertions = assertFinalResult({
       definition: activeDefinition,
       result: finalResult,
       expectedCounts,
       downloadedFilePath,
       csvRecords,
     });
+    const { resolvedDefinition, attentionSummary, consentSummary } = finalAssertions;
 
     logStep(`Scenario summary: ${scenarioLabel}`);
     console.log(
@@ -920,10 +1115,14 @@ async function runTestScenario(definition) {
           saveStatus: finalResult.dataPipeSaveResult?.status,
           dataPipeFilename: finalResult.dataPipeSaveResult?.filename,
           completionCode: finalResult.experimentState?.completionCode,
+          attentionMode: resolvedDefinition.attentionMode,
+          attentionSummary,
+          consentSummary,
           selectedTarget: resolvedDefinition.expectedSelection.targetId,
           selectedControls: resolvedDefinition.expectedSelection.controlIds,
           selectedPostSd: resolvedDefinition.expectedSelection.postSdIds,
           downloadedFile: downloadedFilePath,
+          csvEvidenceFile: csvEvidencePath,
           observedCounts: finalResult.phaseCounts,
         },
         null,
@@ -935,10 +1134,14 @@ async function runTestScenario(definition) {
       participantId: resolvedDefinition.participantId,
       conditionId: resolvedDefinition.conditionId,
       scenarioId: resolvedDefinition.scenarioId,
+      attentionMode: resolvedDefinition.attentionMode,
+      attentionSummary,
+      consentSummary,
       saveStatus: finalResult.dataPipeSaveResult?.status,
       dataPipeFilename: finalResult.dataPipeSaveResult?.filename,
       completionCode: finalResult.experimentState?.completionCode,
       downloadedFile: downloadedFilePath,
+      csvEvidenceFile: csvEvidencePath,
       phaseCounts: finalResult.phaseCounts,
     };
   } finally {
@@ -955,6 +1158,9 @@ async function main() {
   logInfo(`save mode: ${SAVE_MODE}`);
   logInfo(`assignment coverage: ${ASSIGNMENT_COVERAGE}`);
   logInfo(`screenshots: ${SCREENSHOTS_ENABLED}`);
+  logInfo(`attention mode: ${ATTENTION_MODE}`);
+  logInfo(`matching input mode: ${MATCHING_INPUT_MODE}`);
+  await cleanPreviousLiveResults();
   await verifyRuntimeConfigForDataPipe();
 
   if (ASSIGNMENT_COVERAGE === "all_conditions") {
@@ -969,6 +1175,8 @@ async function main() {
         conditionId: "pending_assignment",
         scenarioId: process.env.TEST_SCENARIO ?? "flat_mid",
         participantId,
+        runNumber,
+        attentionMode: resolveAttentionModeForRun(runNumber),
       });
 
       const runSummary = await runTestScenario(definition);
@@ -995,11 +1203,39 @@ async function main() {
     const missingConditions = KNOWN_CONDITION_IDS.filter(
       (conditionId) => !observedConditions.has(conditionId)
     );
+    const attentionModesObserved = Array.from(
+      new Set(runSummaries.map((runSummary) => runSummary.attentionMode).filter(Boolean))
+    );
+    const attentionFailureRuns = runSummaries.filter(
+      (runSummary) => (runSummary.attentionSummary?.failed ?? 0) > 0
+    );
+    const attentionAllPassRuns = runSummaries.filter(
+      (runSummary) =>
+        (runSummary.attentionSummary?.total ?? 0) > 0 &&
+        (runSummary.attentionSummary?.failed ?? 0) === 0
+    );
+
+    if (ATTENTION_MODE === "mixed") {
+      assertCondition(
+        attentionFailureRuns.length > 0,
+        "Expected at least one run with failed attention checks."
+      );
+      assertCondition(
+        attentionAllPassRuns.length > 0,
+        "Expected at least one run with all attention checks passed."
+      );
+    }
+
     const summaryPath = path.join(liveResultDirectory, "summary.json");
     const summary = {
       baseUrl: BASE_URL,
       saveMode: SAVE_MODE,
       assignmentCoverage: ASSIGNMENT_COVERAGE,
+      attentionMode: ATTENTION_MODE,
+      matchingInputMode: MATCHING_INPUT_MODE,
+      attentionModesObserved,
+      attentionFailureRunCount: attentionFailureRuns.length,
+      attentionAllPassRunCount: attentionAllPassRuns.length,
       maxRuns: TEST_MAX_RUNS,
       participantPrefix: TEST_PARTICIPANT_PREFIX,
       screenshotDirectory: SCREENSHOTS_ENABLED ? screenshotDirectory : null,
