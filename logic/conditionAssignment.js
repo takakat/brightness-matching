@@ -4,7 +4,7 @@ import {
   DEFAULT_CONDITION_ID,
   getConditionById,
   getConditionByIndex,
-} from "../config/conditions.js?v=20260526-datapipe-conditions";
+} from "../config/conditions.js?v=20260702-condition-ratio";
 
 function normalizeConditionId(value) {
   // URL で条件を指定された場合でも、定義済み ID だけを有効にします。

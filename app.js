@@ -1,12 +1,12 @@
 import { EXPERIMENT_CONFIG } from "./config/experiment.js?v=20260528-flow-validation";
-import { CONDITION_ASSIGNMENT_CONFIG } from "./config/conditions.js?v=20260526-datapipe-conditions";
+import { CONDITION_ASSIGNMENT_CONFIG } from "./config/conditions.js?v=20260702-condition-ratio";
 import { getPreloadImages, getEnabledStimuli, shuffleStimuliForParticipant } from "./config/stimuli.js";
 import { EVALUATION_KEYS, getSdQuestions } from "./config/scales.js?v=20260627-attention-checks";
 import {
   assignParticipantConditionWithDataPipe,
   buildManualConditionAssignment,
   getOrCreateParticipantId,
-} from "./logic/conditionAssignment.js?v=20260526-datapipe-conditions";
+} from "./logic/conditionAssignment.js?v=20260702-condition-ratio";
 import { buildAnalysisCsv } from "./logic/analysisExport.js?v=20260627-attention-checks";
 import { summarizeExperimentRows } from "./logic/dataSummary.js?v=20260528-flow-validation";
 import { selectStimuli } from "./logic/selection.js";

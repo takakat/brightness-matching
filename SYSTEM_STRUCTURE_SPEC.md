@@ -115,6 +115,15 @@
 
 実際にどの刺激が表示されるかは `pages/writing.js` の `getWritingStimulus()` で決まります。
 
+#### 条件の割り当て比率（2:1:1）
+
+実験群 `counter_attitudinal` を多く集めるため、割り当ては **2:1:1（実験群50% / 各統制群25%）** に設定しています。
+
+- DataPipe 側の **Number of conditions = 4**（順番割り当て 0,1,2,3 を返す）。
+- `config/conditions.js` の `CONDITION_ASSIGNMENT_ORDER` で **index 0 と 3 を実験群** に対応させています。
+- そのため新規参加者の一部は `condition_index=3` になります。**分析は必ず `condition_id` でグループ化**してください（`condition_index` 0 と 3 はどちらも実験群）。
+- 均等（1:1:1）に戻すときは、DataPipe を 3 に戻し、`CONDITION_ASSIGNMENT_ORDER` の index 3 の行を削除して再ビルドします。
+
 ### 4.3 SD法の項目を変えたい
 
 主な変更箇所は `config/scales.js` です。

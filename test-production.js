@@ -14,7 +14,9 @@ const DOWNLOAD_TIMEOUT_MS = Number(process.env.DOWNLOAD_TIMEOUT_MS ?? 30000);
 const POLL_INTERVAL_MS = 250;
 const SAVE_MODE = process.env.TEST_SAVE_MODE ?? "download";
 const ASSIGNMENT_COVERAGE = process.env.TEST_ASSIGNMENT_COVERAGE ?? "matrix";
-const TEST_MAX_RUNS = Number(process.env.TEST_MAX_RUNS ?? 9);
+// 2:1:1 割り当てでは各統制群が 25% と稀になるため、all_conditions カバレッジで
+// 全条件を観測できるよう既定の試行上限を引き上げています（環境変数で上書き可）。
+const TEST_MAX_RUNS = Number(process.env.TEST_MAX_RUNS ?? 18);
 const TEST_PARTICIPANT_PREFIX = process.env.TEST_PARTICIPANT_PREFIX ?? "test";
 const SCREENSHOTS_ENABLED = process.env.SCREENSHOTS === "true";
 const ATTENTION_MODE = process.env.TEST_ATTENTION_MODE ?? "pass";
